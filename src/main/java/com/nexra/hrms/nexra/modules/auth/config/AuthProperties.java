@@ -1,0 +1,110 @@
+package com.nexra.hrms.nexra.modules.auth.config;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
+
+/**
+ * Binds application authentication configuration used by JWT, OTP, OAuth2, mail, and security controls.
+ *
+ * @author niteshjaitwar
+ * @version 1.0
+ */
+@ConfigurationProperties(prefix = "app.auth")
+@Validated
+@Getter
+@Setter
+public class AuthProperties {
+
+    @Valid
+    private Jwt jwt = new Jwt();
+    @Valid
+    private Security security = new Security();
+    @Valid
+    private Oauth2 oauth2 = new Oauth2();
+    @Valid
+    private Mail mail = new Mail();
+    @Min(1)
+    private int otpExpiryMinutes;
+    @Min(1)
+    private int linkExpiryMinutes;
+    private boolean exposeVerificationTokenInResponse;
+
+    /**
+     * Encapsulates JWT signing and lifetime properties.
+     *
+     * @author niteshjaitwar
+     * @version 1.0
+     */
+    @Getter
+    @Setter
+    public static class Jwt {
+
+        private String secret;
+        @Min(1)
+        private int accessTokenMinutes;
+        @Min(1)
+        private int refreshTokenDays;
+    }
+
+    /**
+     * Encapsulates brute-force and OTP throttling configuration.
+     *
+     * @author niteshjaitwar
+     * @version 1.0
+     */
+    @Getter
+    @Setter
+    public static class Security {
+
+        @Min(1)
+        private int loginMaxFailures;
+        @Min(1)
+        private int loginLockMinutes;
+        @Min(1)
+        private int loginFailureWindowMinutes;
+        @Min(1)
+        private int otpRequestLimit;
+        @Min(1)
+        private int otpWindowMinutes;
+        private boolean redisEnabled;
+    }
+
+    /**
+     * Encapsulates OAuth2 issuer and default client bootstrap configuration.
+     *
+     * @author niteshjaitwar
+     * @version 1.0
+     */
+    @Getter
+    @Setter
+    public static class Oauth2 {
+
+        private String issuer;
+        private String defaultClientId;
+        private String defaultClientSecret;
+        private String defaultRedirectUri;
+        private boolean ephemeralKeyEnabled;
+        private String keystoreLocation;
+        private String keystorePassword;
+        private String keystoreKeyAlias;
+        private String keystoreKeyPassword;
+    }
+
+    /**
+     * Encapsulates notification channel mail properties.
+     *
+     * @author niteshjaitwar
+     * @version 1.0
+     */
+    @Getter
+    @Setter
+    public static class Mail {
+
+        private boolean enabled;
+        private String from;
+    }
+}
