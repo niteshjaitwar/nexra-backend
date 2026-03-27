@@ -15,11 +15,12 @@ Migrated and running inside this monolith:
 - `modules.hrms.timesheet`
 - `modules.hrms.onboarding`
 - `modules.hrms.performance`
+- `modules.hrms.recruitment`
 - `modules.payroll`
 
 Planned next:
 
-- `modules.hrms.recruitment`
+- `modules.payroll.expense`
 - `modules.crm.*`
 - `modules.admin.*`
 
@@ -47,6 +48,7 @@ src/main/java/com/nexra/hrms/nexra/
       leave/
       performance/
       onboarding/
+      recruitment/
       timesheet/
     payroll/
   shared/
@@ -84,7 +86,7 @@ Run the full modular-monolith suite:
 The current suite covers:
 
 - auth flows and security negatives
-- employee-core, attendance, leave, timesheet, onboarding, and performance integration plus actuator smoke
+- employee-core, attendance, leave, timesheet, onboarding, performance, and recruitment integration plus actuator smoke
 - payroll integration, document generation, and actuator smoke
 - monolith context startup
 

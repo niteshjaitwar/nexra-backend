@@ -17,11 +17,11 @@ Migrated into `nexra`:
 - `modules.hrms.timesheet`
 - `modules.hrms.onboarding`
 - `modules.hrms.performance`
+- `modules.hrms.recruitment`
 - `modules.payroll`
 
 Still pending migration:
 
-- `recruitment`
 - `expense`
 - `crm-leads`
 - `crm-contacts`
