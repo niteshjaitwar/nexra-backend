@@ -21,5 +21,8 @@ jobs:
           java-version: 25
           cache: maven
 
-      - name: Run monolith test suite
-        run: ./mvnw --batch-mode test
+      - name: Ensure Maven wrapper is executable
+        run: chmod +x ./mvnw
+
+      - name: Run monolith verification suite
+        run: ./mvnw --batch-mode verify

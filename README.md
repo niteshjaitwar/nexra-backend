@@ -10,13 +10,17 @@ Migrated and running inside this monolith:
 
 - `modules.auth`
 - `modules.hrms.employee`
-- `modules.payroll`
-
-Planned next:
-
 - `modules.hrms.attendance`
 - `modules.hrms.leave`
 - `modules.hrms.timesheet`
+- `modules.hrms.onboarding`
+- `modules.hrms.performance`
+- `modules.hrms.recruitment`
+- `modules.payroll`
+
+Pending next:
+
+- `modules.hrms.expense`
 - `modules.crm.*`
 - `modules.admin.*`
 
@@ -69,18 +73,24 @@ On Windows:
 Run the full modular-monolith suite:
 
 ```bash
-./mvnw test
+./mvnw verify
 ```
 
 The current suite covers:
 
 - auth flows and security negatives
-- employee-core integration and actuator smoke
+- employee integration and actuator smoke
+- attendance integration and actuator smoke
+- leave integration and actuator smoke
+- timesheet integration and actuator smoke
+- onboarding integration and actuator smoke
+- performance integration and actuator smoke
+- recruitment integration and actuator smoke
 - payroll integration, document generation, and actuator smoke
 - monolith context startup
 
 ## Production Notes
 
-This repository is being hardened module by module. Security boundaries, request correlation, validation, Flyway discipline, and integration tests are already in place for the migrated modules.
+This repository is being hardened module by module. Security boundaries, JSON auth/error responses, request correlation, validation, Flyway discipline, actuator smoke coverage, and integration tests are already in place for the migrated modules.
 
 The monolith is the target runtime shape. The older standalone service folders are source material for migration, not the final deployment model.
