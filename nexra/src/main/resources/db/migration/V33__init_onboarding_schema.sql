@@ -1,0 +1,4 @@
+create table onboarding_plans (plan_id varchar(36) not null, tenant_code varchar(64) not null, employee_id varchar(36) not null, plan_name varchar(200) not null, status varchar(30) not null, created_at timestamp not null, updated_at timestamp not null, created_by varchar(120) not null, updated_by varchar(120) not null, primary key (plan_id));
+create table onboarding_tasks (task_id varchar(36) not null, tenant_code varchar(64) not null, plan_id varchar(36) not null, task_name varchar(200) not null, owner_team varchar(80) null, status varchar(30) not null, created_at timestamp not null, updated_at timestamp not null, created_by varchar(120) not null, updated_by varchar(120) not null, primary key (task_id));
+create index idx_onboarding_plans_tenant on onboarding_plans (tenant_code);
+create index idx_onboarding_tasks_tenant_plan on onboarding_tasks (tenant_code, plan_id);

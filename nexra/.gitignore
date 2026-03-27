@@ -1,0 +1,15 @@
+target/
+.env
+.env.local
+.mvn/wrapper/maven-wrapper.jar
+
+### IDE ###
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+### OS ###
+.DS_Store
+Thumbs.db

@@ -1,0 +1,3 @@
+-- Payroll service currently operates as a stateless/reference in-memory payroll engine.
+-- This placeholder migration reserves Flyway versioning for future persistent payroll storage.
+-- Author: niteshjaitwar

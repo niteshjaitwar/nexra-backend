@@ -1,0 +1,90 @@
+package com.nexra.hrms.nexra.modules.hrms.employee.exception;
+
+import com.nexra.hrms.nexra.modules.hrms.employee.dto.ApiResponse;
+import jakarta.validation.ConstraintViolationException;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+/**
+ * Centralized exception handling for employee-core APIs.
+ *
+ * @author niteshjaitwar
+ * @version 1.0
+ */
+@RestControllerAdvice(basePackages = "com.nexra.hrms.nexra.modules.hrms.employee")
+@Slf4j
+public class EmployeeCoreGlobalExceptionHandler {
+
+    @ExceptionHandler(EmployeeCoreBusinessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusiness(final EmployeeCoreBusinessException ex) {
+        log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - business error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.failure(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmployeeCoreResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(final EmployeeCoreResourceNotFoundException ex) {
+        log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - resource not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.failure(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmployeeCoreForbiddenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleForbidden(final EmployeeCoreForbiddenException ex) {
+        log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - forbidden: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.failure(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmployeeCoreUnauthorizedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnauthorized(final EmployeeCoreUnauthorizedException ex) {
+        log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - unauthorized: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.failure(ex.getMessage()));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleValidation(final MethodArgumentNotValidException ex) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(err -> fieldErrors.put(err.getField(), err.getDefaultMessage()));
+        log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - request validation failed: {}", fieldErrors);
+        return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Validation failed.", Map.of(
+            "errors", fieldErrors,
+            "timestamp", Instant.now()
+        )));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleConstraintViolation(final ConstraintViolationException ex) {
+        log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - constraint violation: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Validation failed.", Map.of(
+            "details", ex.getMessage(),
+            "timestamp", Instant.now()
+        )));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleNotReadable(final HttpMessageNotReadableException ex) {
+        log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - malformed payload: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Invalid request payload.", Map.of(
+            "timestamp", Instant.now()
+        )));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(final IllegalArgumentException ex) {
+        log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - illegal argument: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(ApiResponse.failure(ex.getMessage()));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnhandled(final Exception ex) {
+        log.error("EmployeeCore EmployeeCoreGlobalExceptionHandler - unhandled exception", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ApiResponse.failure("Internal server error."));
+    }
+}

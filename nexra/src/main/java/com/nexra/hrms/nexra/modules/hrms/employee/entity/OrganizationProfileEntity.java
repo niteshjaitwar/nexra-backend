@@ -1,0 +1,90 @@
+package com.nexra.hrms.nexra.modules.hrms.employee.entity;
+
+import com.nexra.hrms.nexra.modules.hrms.employee.entity.base.AbstractAuditableEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "ec_organization_profiles")
+public class OrganizationProfileEntity extends AbstractAuditableEntity {
+
+    @Id
+    @Column(name = "id", nullable = false, length = 36)
+    private String id;
+
+    @Column(name = "tenant_code", nullable = false, length = 60, unique = true)
+    private String tenantCode;
+
+    @Column(name = "organization_name", nullable = false, length = 160)
+    private String organizationName;
+
+    @Column(name = "legal_entity_name", nullable = false, length = 160)
+    private String legalEntityName;
+
+    @Column(name = "address_line1", nullable = false, length = 200)
+    private String addressLine1;
+
+    @Column(name = "address_line2", length = 200)
+    private String addressLine2;
+
+    @Column(name = "city", nullable = false, length = 100)
+    private String city;
+
+    @Column(name = "state", nullable = false, length = 100)
+    private String state;
+
+    @Column(name = "country", nullable = false, length = 100)
+    private String country;
+
+    @Column(name = "postal_code", nullable = false, length = 30)
+    private String postalCode;
+
+    @Column(name = "currency", nullable = false, length = 12)
+    private String currency;
+
+    @Column(name = "default_tax_percent", nullable = false, precision = 10, scale = 2)
+    private BigDecimal defaultTaxPercent;
+
+    @Column(name = "default_provident_fund_percent", nullable = false, precision = 10, scale = 2)
+    private BigDecimal defaultProvidentFundPercent;
+
+    @Column(name = "payroll_contact_email", length = 160)
+    private String payrollContactEmail;
+
+    @Column(name = "payroll_contact_phone", length = 40)
+    private String payrollContactPhone;
+
+    public String getId() { return id; }
+    public void setId(final String id) { this.id = id; }
+    public String getTenantCode() { return tenantCode; }
+    public void setTenantCode(final String tenantCode) { this.tenantCode = tenantCode; }
+    public String getOrganizationName() { return organizationName; }
+    public void setOrganizationName(final String organizationName) { this.organizationName = organizationName; }
+    public String getLegalEntityName() { return legalEntityName; }
+    public void setLegalEntityName(final String legalEntityName) { this.legalEntityName = legalEntityName; }
+    public String getAddressLine1() { return addressLine1; }
+    public void setAddressLine1(final String addressLine1) { this.addressLine1 = addressLine1; }
+    public String getAddressLine2() { return addressLine2; }
+    public void setAddressLine2(final String addressLine2) { this.addressLine2 = addressLine2; }
+    public String getCity() { return city; }
+    public void setCity(final String city) { this.city = city; }
+    public String getState() { return state; }
+    public void setState(final String state) { this.state = state; }
+    public String getCountry() { return country; }
+    public void setCountry(final String country) { this.country = country; }
+    public String getPostalCode() { return postalCode; }
+    public void setPostalCode(final String postalCode) { this.postalCode = postalCode; }
+    public String getCurrency() { return currency; }
+    public void setCurrency(final String currency) { this.currency = currency; }
+    public BigDecimal getDefaultTaxPercent() { return defaultTaxPercent; }
+    public void setDefaultTaxPercent(final BigDecimal defaultTaxPercent) { this.defaultTaxPercent = defaultTaxPercent; }
+    public BigDecimal getDefaultProvidentFundPercent() { return defaultProvidentFundPercent; }
+    public void setDefaultProvidentFundPercent(final BigDecimal defaultProvidentFundPercent) { this.defaultProvidentFundPercent = defaultProvidentFundPercent; }
+    public String getPayrollContactEmail() { return payrollContactEmail; }
+    public void setPayrollContactEmail(final String payrollContactEmail) { this.payrollContactEmail = payrollContactEmail; }
+    public String getPayrollContactPhone() { return payrollContactPhone; }
+    public void setPayrollContactPhone(final String payrollContactPhone) { this.payrollContactPhone = payrollContactPhone; }
+}

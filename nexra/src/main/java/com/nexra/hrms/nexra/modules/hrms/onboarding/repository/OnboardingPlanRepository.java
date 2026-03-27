@@ -1,0 +1,3 @@
+package com.nexra.hrms.nexra.modules.hrms.onboarding.repository; import com.nexra.hrms.nexra.modules.hrms.onboarding.entity.OnboardingPlanEntity; import java.util.*; import org.springframework.data.jpa.repository.JpaRepository;
+public interface OnboardingPlanRepository extends JpaRepository<OnboardingPlanEntity,String>{ Optional<OnboardingPlanEntity> findByTenantCodeAndPlanId(String tenantCode,String planId); List<OnboardingPlanEntity> findByTenantCodeOrderByCreatedAtDesc(String tenantCode); long countByTenantCode(String tenantCode); long countByTenantCodeAndStatus(String tenantCode,String status); }
+

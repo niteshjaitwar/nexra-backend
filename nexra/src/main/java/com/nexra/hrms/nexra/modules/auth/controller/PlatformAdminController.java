@@ -1,0 +1,47 @@
+package com.nexra.hrms.nexra.modules.auth.controller;
+
+import com.nexra.hrms.nexra.modules.auth.dto.request.TenantProvisionRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.response.ApiResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.TenantProvisionResponse;
+import com.nexra.hrms.nexra.modules.auth.service.TenantProvisioningService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Exposes platform admin APIs for SME tenant provisioning and management.
+ *
+ * @author niteshjaitwar
+ * @version 1.0
+ */
+@Slf4j
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/platform")
+public class PlatformAdminController {
+
+    private final TenantProvisioningService tenantProvisioningService;
+
+    /**
+     * Provisions a new SME tenant with admin user and product access in a single operation.
+     *
+     * @param request tenant provisioning payload
+     * @return standardized API response with provisioning summary
+     */
+    @PostMapping("/tenants/provision")
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<ApiResponse<TenantProvisionResponse>> provisionTenant(
+        @Valid @RequestBody final TenantProvisionRequest request
+    ) {
+        log.info("PlatformAdminController() - provisionTenant() - Provision endpoint invoked, tenantCode={}, products={}",
+            request.tenantCode(), request.products());
+        TenantProvisionResponse response = tenantProvisioningService.provision(request);
+        return ResponseEntity.ok(ApiResponse.success("Tenant provisioned successfully.", response));
+    }
+}
