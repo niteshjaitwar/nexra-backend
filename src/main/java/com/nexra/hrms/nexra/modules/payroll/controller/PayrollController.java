@@ -1,6 +1,6 @@
 package com.nexra.hrms.nexra.modules.payroll.controller;
 
-import com.nexra.hrms.nexra.modules.payroll.dto.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.modules.payroll.dto.PayrollGenerationRequest;
 import com.nexra.hrms.nexra.modules.payroll.dto.ProfilePayrollGenerationRequest;
 import com.nexra.hrms.nexra.modules.payroll.exception.PayrollBusinessException;
@@ -53,7 +53,7 @@ public class PayrollController {
             Map.of(
                 "service", "payroll",
                 "state", "UP",
-                "storage", "In-memory reference engine",
+                "storage", "Persistent JPA store",
                 "security", "JWT tenant-scoped"
             )
         ));
@@ -184,6 +184,7 @@ public class PayrollController {
     private AuthenticatedPayrollUser currentUser(final HttpServletRequest request) {
         Object value = request.getAttribute(PayrollAuthFilter.ATTR_AUTH_USER);
         if (value instanceof AuthenticatedPayrollUser user) {
+            requirePayrollProductScope(user);
             return user;
         }
         throw new PayrollUnauthorizedException("Missing authenticated payroll user");
@@ -198,5 +199,14 @@ public class PayrollController {
 
     private boolean hasRole(final AuthenticatedPayrollUser actor, final String role) {
         return actor.roles().contains(role) || actor.roles().contains("ROLE_" + role);
+    }
+
+    private void requirePayrollProductScope(final AuthenticatedPayrollUser actor) {
+        if (actor.products().isEmpty()
+            || actor.products().contains("PAYROLL")
+            || actor.products().contains("HRMS")) {
+            return;
+        }
+        throw new PayrollForbiddenException("User does not have payroll product access");
     }
 }

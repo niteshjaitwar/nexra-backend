@@ -1,6 +1,6 @@
 package com.nexra.hrms.nexra.modules.payroll.controller;
 
-import com.nexra.hrms.nexra.modules.payroll.dto.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.modules.payroll.dto.EmployeeProfileUpsertRequest;
 import com.nexra.hrms.nexra.modules.payroll.dto.OrganizationProfileUpsertRequest;
 import com.nexra.hrms.nexra.modules.payroll.exception.PayrollForbiddenException;

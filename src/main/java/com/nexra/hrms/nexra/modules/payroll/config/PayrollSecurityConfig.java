@@ -3,7 +3,7 @@ package com.nexra.hrms.nexra.modules.payroll.config;
 import com.nexra.hrms.nexra.modules.payroll.security.PayrollAuthFilter;
 import com.nexra.hrms.nexra.modules.payroll.security.PayrollJsonAccessDeniedHandler;
 import com.nexra.hrms.nexra.modules.payroll.security.PayrollJsonAuthenticationEntryPoint;
-import com.nexra.hrms.nexra.modules.payroll.security.PayrollRequestCorrelationFilter;
+import com.nexra.hrms.nexra.common.web.SecurityHeadersCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,7 +41,6 @@ public class PayrollSecurityConfig {
     @Order(4)
     public SecurityFilterChain payrollSecurityFilterChain(
         final HttpSecurity http,
-        final PayrollRequestCorrelationFilter requestCorrelationFilter,
         final PayrollAuthFilter payrollAuthFilter,
         final PayrollJsonAuthenticationEntryPoint authenticationEntryPoint,
         final PayrollJsonAccessDeniedHandler accessDeniedHandler
@@ -60,7 +59,7 @@ public class PayrollSecurityConfig {
                 .requestMatchers("/api/v1/payroll/status", "/api/v1/payroll/capabilities").permitAll()
                 .anyRequest().authenticated()
             );
-        http.addFilterBefore(requestCorrelationFilter, UsernamePasswordAuthenticationFilter.class);
+        SecurityHeadersCustomizer.apply(http);
         http.addFilterBefore(payrollAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

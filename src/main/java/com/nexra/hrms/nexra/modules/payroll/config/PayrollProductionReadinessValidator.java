@@ -28,6 +28,11 @@ public class PayrollProductionReadinessValidator implements ApplicationRunner {
         String jwtSecret = payrollProperties.getSecurity().getJwtSecret();
         assertCondition(jwtSecret != null && !jwtSecret.isBlank(), "AUTH_JWT_SECRET must be configured.");
         assertCondition(jwtSecret.length() >= 32, "AUTH_JWT_SECRET must be at least 32 characters.");
+        assertCondition(hasText(environment.getProperty("spring.datasource.url")), "spring.datasource.url must be configured.");
+        assertCondition(hasText(environment.getProperty("spring.datasource.username")), "spring.datasource.username must be configured.");
+        assertCondition(hasText(environment.getProperty("spring.datasource.password")), "spring.datasource.password must be configured.");
+        assertCondition(!environment.getProperty("spring.datasource.url", "").startsWith("jdbc:h2:"),
+            "spring.datasource.url must not use H2 in prod.");
         assertCondition(hasText(payrollProperties.getBrand().getCompanyName()), "Payroll brand company name must be configured.");
         assertCondition(hasText(payrollProperties.getBrand().getBannerPath()), "Payroll brand banner path must be configured.");
         assertCondition(payrollProperties.getBrand().getBannerPath().startsWith("/"), "Payroll brand banner path must start with '/'.");

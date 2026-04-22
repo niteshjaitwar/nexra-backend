@@ -1,96 +1,125 @@
 # Nexra Backend
 
-`nexra` is the modular-monolith backend for the Nexra HRMS/CRM platform.
+Production-grade modular monolith powering **Nexra HRMS + CRM**.
 
-The goal is to consolidate the earlier microservice-style codebase into one Spring Boot application with clear internal module boundaries, shared platform rules, and production-grade testing.
+## Overview
 
-## Current State
+Nexra Backend is a single Spring Boot runtime with strict internal module boundaries, shared cross-cutting standards, and CI-enforced quality gates.  
+It is designed for fast feature delivery without microservice complexity while preserving enterprise reliability.
 
-Migrated and running inside this monolith:
+- **Live website**: [https://hrms.nexra.info](https://hrms.nexra.info)
+- **Architecture**: Modular monolith
+- **Primary domain**: HRMS + CRM
+- **Current status**: Production-ready backend baseline with verified module hardening
 
-- `modules.auth`
-- `modules.hrms.employee`
-- `modules.hrms.attendance`
-- `modules.hrms.leave`
-- `modules.hrms.timesheet`
-- `modules.hrms.onboarding`
-- `modules.hrms.performance`
-- `modules.hrms.recruitment`
-- `modules.payroll`
+## Implemented Modules
 
-Pending next:
+- `auth`
+- `hrms.employee`
+- `hrms.attendance`
+- `hrms.leave`
+- `hrms.timesheet`
+- `hrms.onboarding`
+- `hrms.performance`
+- `hrms.recruitment`
+- `hrms.expense`
+- `payroll`
+- `crm` (tenant-isolated persistent lead baseline + domain schema for accounts/contacts/deals/activities/tasks)
 
-- `modules.hrms.expense`
-- `modules.crm.*`
-- `modules.admin.*`
+## Core Engineering Standards
+
+- Shared API contract via canonical `ApiResponse`
+- Shared exception model with centralized global handling
+- Shared request correlation (`X-Request-Id`) and hardened security headers
+- Shared global rate limiting with bounded in-memory key strategy
+- Shared auditing and optimistic locking (`@Version`) via common persistence base
+- Flyway-first schema evolution
+- OpenAPI + actuator + Prometheus-ready metrics
+- CI gates: Maven enforcer + JaCoCo coverage check
 
 ## Tech Stack
 
 - Java 25
 - Spring Boot 4
-- Spring Security
-- Spring Data JPA
-- Flyway
-- H2 for tests
-- MySQL for production
-- Redis for auth hardening flows
-- Thymeleaf + OpenHTMLToPDF for payslip documents
+- Spring Security + OAuth2 Authorization Server
+- Spring Data JPA + Flyway
+- MySQL (runtime), H2 (tests)
+- Redis (auth hardening flows)
+- Micrometer + Prometheus registry
+- Thymeleaf + OpenHTMLToPDF + PDFBox (payslips)
 
-## Module Layout
+## Project Structure
 
 ```text
 src/main/java/com/nexra/hrms/nexra/
+  common/
+    api/
+    exception/
+    logging/
+    openapi/
+    persistence/
+    ratelimit/
+    web/
   modules/
     auth/
+    crm/
     hrms/
+      attendance/
       employee/
+      expense/
+      leave/
+      onboarding/
+      performance/
+      recruitment/
+      timesheet/
     payroll/
-  shared/
 ```
 
-Supporting docs:
+## Run Locally
 
-- [docs/modular-monolith-architecture.md](./docs/modular-monolith-architecture.md)
-
-## Local Run
-
-1. Copy `.env.example` to `.env` or export the environment variables another way.
-2. Use the `test` or `dev` Spring profile for local development.
-3. Start the app:
+### Linux / macOS
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=test
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-On Windows:
+### Windows (PowerShell)
 
 ```powershell
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=test"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-## Test
-
-Run the full modular-monolith suite:
+## Verify Quality Gates
 
 ```bash
 ./mvnw verify
 ```
 
-The current suite covers:
+This executes:
+- compile + unit/integration tests
+- module production validator tests
+- JaCoCo coverage check
+- enforcer baseline rules
 
-- auth flows and security negatives
-- employee integration and actuator smoke
-- attendance integration and actuator smoke
-- leave integration and actuator smoke
-- timesheet integration and actuator smoke
-- onboarding integration and actuator smoke
-- performance integration and actuator smoke
-- recruitment integration and actuator smoke
-- payroll integration, document generation, and actuator smoke
-- monolith context startup
+## Frontend Integration Notes
 
-## Production Notes
+- Frontend workspace (`../nexrahrms`) targets this monolith backend.
+- Local frontend expects backend on `http://localhost:8081`.
+- API base paths:
+  - `/api/v1/auth/*`
+  - `/api/v1/employee-core/*`
+  - `/api/v1/attendance/*`
+  - `/api/v1/leave/*`
+  - `/api/v1/timesheet/*`
+  - `/api/v1/payroll/*`
+  - `/api/v1/crm/*`
 
-This repository is being hardened module by module. Security boundaries, JSON auth/error responses, request correlation, validation, Flyway discipline, actuator smoke coverage, and integration tests are already in place for the migrated modules.
+## Documentation
 
-The monolith is the target runtime shape. The older standalone service folders are source material for migration, not the final deployment model.
+- [Modular Monolith Architecture](./docs/modular-monolith-architecture.md)
+- [Production Delivery Plan](./docs/production-delivery-plan.md)
+- [Production Readiness Checklist](./docs/production-readiness-checklist.md)
+
+## License
+
+Proprietary - Nexra internal platform.

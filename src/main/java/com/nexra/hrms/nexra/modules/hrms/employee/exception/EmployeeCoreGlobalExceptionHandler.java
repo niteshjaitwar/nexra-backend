@@ -1,11 +1,12 @@
 package com.nexra.hrms.nexra.modules.hrms.employee.exception;
 
-import com.nexra.hrms.nexra.modules.hrms.employee.dto.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * @author niteshjaitwar
  * @version 1.0
  */
+@Order(Ordered.HIGHEST_PRECEDENCE + 100)
 @RestControllerAdvice(basePackages = "com.nexra.hrms.nexra.modules.hrms.employee")
 @Slf4j
 public class EmployeeCoreGlobalExceptionHandler {
@@ -48,31 +50,26 @@ public class EmployeeCoreGlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, Object>>> handleValidation(final MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleValidation(final MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(err -> fieldErrors.put(err.getField(), err.getDefaultMessage()));
         log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - request validation failed: {}", fieldErrors);
-        return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Validation failed.", Map.of(
-            "errors", fieldErrors,
-            "timestamp", Instant.now()
-        )));
+        return ResponseEntity.badRequest()
+            .body(ApiResponse.failure("VALIDATION_FAILED", "Validation failed.").withMeta("errors", fieldErrors));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiResponse<Map<String, Object>>> handleConstraintViolation(final ConstraintViolationException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(final ConstraintViolationException ex) {
         log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - constraint violation: {}", ex.getMessage());
-        return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Validation failed.", Map.of(
-            "details", ex.getMessage(),
-            "timestamp", Instant.now()
-        )));
+        return ResponseEntity.badRequest()
+            .body(ApiResponse.failure("VALIDATION_FAILED", "Validation failed.")
+                .withMeta("details", ex.getMessage()));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Map<String, Object>>> handleNotReadable(final HttpMessageNotReadableException ex) {
+    public ResponseEntity<ApiResponse<Void>> handleNotReadable(final HttpMessageNotReadableException ex) {
         log.warn("EmployeeCore EmployeeCoreGlobalExceptionHandler - malformed payload: {}", ex.getMessage());
-        return ResponseEntity.badRequest().body(new ApiResponse<>(false, "Invalid request payload.", Map.of(
-            "timestamp", Instant.now()
-        )));
+        return ResponseEntity.badRequest().body(ApiResponse.failure("MALFORMED_JSON", "Invalid request payload."));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

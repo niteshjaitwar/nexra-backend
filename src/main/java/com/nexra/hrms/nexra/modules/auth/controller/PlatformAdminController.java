@@ -1,7 +1,7 @@
 package com.nexra.hrms.nexra.modules.auth.controller;
 
 import com.nexra.hrms.nexra.modules.auth.dto.request.TenantProvisionRequest;
-import com.nexra.hrms.nexra.modules.auth.dto.response.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.TenantProvisionResponse;
 import com.nexra.hrms.nexra.modules.auth.service.TenantProvisioningService;
 import jakarta.validation.Valid;

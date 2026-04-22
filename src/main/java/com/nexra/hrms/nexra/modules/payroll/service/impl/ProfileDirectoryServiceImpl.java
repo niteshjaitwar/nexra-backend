@@ -2,21 +2,24 @@ package com.nexra.hrms.nexra.modules.payroll.service.impl;
 
 import com.nexra.hrms.nexra.modules.payroll.dto.EmployeeProfileUpsertRequest;
 import com.nexra.hrms.nexra.modules.payroll.dto.OrganizationProfileUpsertRequest;
+import com.nexra.hrms.nexra.modules.payroll.entity.PayrollEmployeeProfileEntity;
+import com.nexra.hrms.nexra.modules.payroll.entity.PayrollOrganizationProfileEntity;
 import com.nexra.hrms.nexra.modules.payroll.exception.PayrollBusinessException;
 import com.nexra.hrms.nexra.modules.payroll.exception.PayrollResourceNotFoundException;
 import com.nexra.hrms.nexra.modules.payroll.model.EmployeeProfile;
 import com.nexra.hrms.nexra.modules.payroll.model.OrganizationProfile;
+import com.nexra.hrms.nexra.modules.payroll.repository.PayrollEmployeeProfileRepository;
+import com.nexra.hrms.nexra.modules.payroll.repository.PayrollOrganizationProfileRepository;
 import com.nexra.hrms.nexra.modules.payroll.security.AuthenticatedPayrollUser;
 import com.nexra.hrms.nexra.modules.payroll.service.ProfileDirectoryService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * In-memory payroll profile directory for organization and employee reference profiles.
@@ -26,79 +29,88 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ProfileDirectoryServiceImpl implements ProfileDirectoryService {
 
-    private final Map<String, OrganizationProfile> organizationProfiles = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, EmployeeProfile>> employeeProfiles = new ConcurrentHashMap<>();
+    private final PayrollOrganizationProfileRepository organizationProfileRepository;
+    private final PayrollEmployeeProfileRepository employeeProfileRepository;
 
     @Override
+    @Transactional
     public OrganizationProfile upsertOrganizationProfile(
         final OrganizationProfileUpsertRequest request,
         final AuthenticatedPayrollUser actor
     ) {
         verifyTenant(actor, request.tenantCode());
-        OrganizationProfile profile = new OrganizationProfile(
-            request.tenantCode(),
-            request.organizationName(),
-            request.legalEntityName(),
-            request.addressLine1(),
-            blankToNull(request.addressLine2()),
-            request.city(),
-            request.state(),
-            request.country(),
-            request.postalCode(),
-            request.currency().trim().toUpperCase(),
-            amountOrZero(request.defaultTaxPercent()),
-            amountOrZero(request.defaultProvidentFundPercent()),
-            blankToNull(request.payrollContactEmail()),
-            blankToNull(request.payrollContactPhone()),
-            Instant.now(),
-            actor.email()
-        );
-        organizationProfiles.put(profile.tenantCode().toUpperCase(), profile);
+        String tenantCode = request.tenantCode().trim().toUpperCase();
+        PayrollOrganizationProfileEntity entity = organizationProfileRepository.findByTenantCodeIgnoreCase(tenantCode)
+            .orElseGet(PayrollOrganizationProfileEntity::new);
+        if (entity.getId() == null) {
+            entity.setId(UUID.randomUUID().toString());
+            entity.setCreatedBy(actor.email());
+        }
+
+        entity.setTenantCode(tenantCode);
+        entity.setOrganizationName(request.organizationName().trim());
+        entity.setLegalEntityName(request.legalEntityName().trim());
+        entity.setAddressLine1(request.addressLine1().trim());
+        entity.setAddressLine2(blankToNull(request.addressLine2()));
+        entity.setCity(request.city().trim());
+        entity.setState(request.state().trim());
+        entity.setCountry(request.country().trim());
+        entity.setPostalCode(request.postalCode().trim());
+        entity.setCurrency(request.currency().trim().toUpperCase());
+        entity.setDefaultTaxPercent(amountOrZero(request.defaultTaxPercent()));
+        entity.setDefaultProvidentFundPercent(amountOrZero(request.defaultProvidentFundPercent()));
+        entity.setPayrollContactEmail(blankToNullLower(request.payrollContactEmail()));
+        entity.setPayrollContactPhone(blankToNull(request.payrollContactPhone()));
+        entity.setUpdatedBy(actor.email());
+
+        PayrollOrganizationProfileEntity saved = organizationProfileRepository.save(entity);
         log.info("ProfileDirectoryServiceImpl - upsertOrganizationProfile - tenantCode={}, actor={}",
-            profile.tenantCode(), actor.email());
-        return profile;
+            saved.getTenantCode(), actor.email());
+        return toModel(saved);
     }
 
     @Override
     public OrganizationProfile getOrganizationProfile(final String tenantCode, final AuthenticatedPayrollUser actor) {
         verifyTenant(actor, tenantCode);
-        OrganizationProfile profile = organizationProfiles.get(tenantCode.toUpperCase());
-        if (profile == null) {
-            throw new PayrollResourceNotFoundException("Organization profile not found for tenant: " + tenantCode);
-        }
-        return profile;
+        return getOrganizationProfileInternal(tenantCode);
     }
 
     @Override
+    @Transactional
     public EmployeeProfile upsertEmployeeProfile(
         final EmployeeProfileUpsertRequest request,
         final AuthenticatedPayrollUser actor
     ) {
         verifyTenant(actor, request.tenantCode());
-        EmployeeProfile profile = new EmployeeProfile(
-            request.tenantCode(),
-            request.employeeId(),
-            request.employeeCode(),
-            request.employeeName(),
-            request.department(),
-            request.designation(),
-            request.monthlyBasicSalary().setScale(2, RoundingMode.HALF_UP),
-            blankToNull(request.bankName()),
-            blankToNull(request.bankAccountMasked()),
-            blankToNull(request.panMasked()),
-            blankToNull(request.uanMasked()),
-            blankToNull(request.email()),
-            Instant.now(),
-            actor.email()
-        );
+        String tenantCode = request.tenantCode().trim().toUpperCase();
+        PayrollEmployeeProfileEntity entity = employeeProfileRepository.findByTenantCodeIgnoreCaseAndEmployeeId(tenantCode, request.employeeId())
+            .orElseGet(PayrollEmployeeProfileEntity::new);
+        if (entity.getId() == null) {
+            entity.setId(UUID.randomUUID().toString());
+            entity.setCreatedBy(actor.email());
+        }
 
-        employeeProfiles.computeIfAbsent(profile.tenantCode().toUpperCase(), ignored -> new ConcurrentHashMap<>())
-            .put(profile.employeeId(), profile);
+        entity.setTenantCode(tenantCode);
+        entity.setEmployeeId(request.employeeId().trim());
+        entity.setEmployeeCode(request.employeeCode().trim());
+        entity.setEmployeeName(request.employeeName().trim());
+        entity.setDepartment(request.department().trim());
+        entity.setDesignation(request.designation().trim());
+        entity.setMonthlyBasicSalary(request.monthlyBasicSalary().setScale(2, RoundingMode.HALF_UP));
+        entity.setBankName(blankToNull(request.bankName()));
+        entity.setBankAccountMasked(blankToNull(request.bankAccountMasked()));
+        entity.setPanMasked(blankToNull(request.panMasked()));
+        entity.setUanMasked(blankToNull(request.uanMasked()));
+        entity.setEmail(blankToNullLower(request.email()));
+        entity.setUpdatedBy(actor.email());
+
+        PayrollEmployeeProfileEntity saved = employeeProfileRepository.save(entity);
         log.info("ProfileDirectoryServiceImpl - upsertEmployeeProfile - tenantCode={}, employeeId={}, actor={}",
-            profile.tenantCode(), profile.employeeId(), actor.email());
-        return profile;
+            saved.getTenantCode(), saved.getEmployeeId(), actor.email());
+        return toModel(saved);
     }
 
     @Override
@@ -114,27 +126,23 @@ public class ProfileDirectoryServiceImpl implements ProfileDirectoryService {
     @Override
     public List<EmployeeProfile> listEmployeeProfiles(final String tenantCode, final AuthenticatedPayrollUser actor) {
         verifyTenant(actor, tenantCode);
-        return employeeProfiles.getOrDefault(tenantCode.toUpperCase(), Map.of()).values().stream()
-            .sorted(Comparator.comparing(EmployeeProfile::employeeCode))
+        return employeeProfileRepository.findByTenantCodeIgnoreCaseOrderByEmployeeCodeAsc(tenantCode.trim().toUpperCase()).stream()
+            .map(this::toModel)
             .toList();
     }
 
     @Override
     public OrganizationProfile getOrganizationProfileInternal(final String tenantCode) {
-        OrganizationProfile profile = organizationProfiles.get(tenantCode.toUpperCase());
-        if (profile == null) {
-            throw new PayrollResourceNotFoundException("Organization profile not found for tenant: " + tenantCode);
-        }
-        return profile;
+        return organizationProfileRepository.findByTenantCodeIgnoreCase(tenantCode.trim().toUpperCase())
+            .map(this::toModel)
+            .orElseThrow(() -> new PayrollResourceNotFoundException("Organization profile not found for tenant: " + tenantCode));
     }
 
     @Override
     public EmployeeProfile getEmployeeProfileInternal(final String tenantCode, final String employeeId) {
-        EmployeeProfile profile = employeeProfiles.getOrDefault(tenantCode.toUpperCase(), Map.of()).get(employeeId);
-        if (profile == null) {
-            throw new PayrollResourceNotFoundException("Employee profile not found: " + employeeId + " for tenant " + tenantCode);
-        }
-        return profile;
+        return employeeProfileRepository.findByTenantCodeIgnoreCaseAndEmployeeId(tenantCode.trim().toUpperCase(), employeeId.trim())
+            .map(this::toModel)
+            .orElseThrow(() -> new PayrollResourceNotFoundException("Employee profile not found: " + employeeId + " for tenant " + tenantCode));
     }
 
     private void verifyTenant(final AuthenticatedPayrollUser actor, final String tenantCode) {
@@ -147,7 +155,52 @@ public class ProfileDirectoryServiceImpl implements ProfileDirectoryService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    private String blankToNullLower(final String value) {
+        String trimmed = blankToNull(value);
+        return trimmed == null ? null : trimmed.toLowerCase();
+    }
+
     private BigDecimal amountOrZero(final BigDecimal value) {
         return (value == null ? BigDecimal.ZERO : value).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private OrganizationProfile toModel(final PayrollOrganizationProfileEntity entity) {
+        return new OrganizationProfile(
+            entity.getTenantCode(),
+            entity.getOrganizationName(),
+            entity.getLegalEntityName(),
+            entity.getAddressLine1(),
+            entity.getAddressLine2(),
+            entity.getCity(),
+            entity.getState(),
+            entity.getCountry(),
+            entity.getPostalCode(),
+            entity.getCurrency(),
+            entity.getDefaultTaxPercent(),
+            entity.getDefaultProvidentFundPercent(),
+            entity.getPayrollContactEmail(),
+            entity.getPayrollContactPhone(),
+            entity.getUpdatedAt(),
+            entity.getUpdatedBy()
+        );
+    }
+
+    private EmployeeProfile toModel(final PayrollEmployeeProfileEntity entity) {
+        return new EmployeeProfile(
+            entity.getTenantCode(),
+            entity.getEmployeeId(),
+            entity.getEmployeeCode(),
+            entity.getEmployeeName(),
+            entity.getDepartment(),
+            entity.getDesignation(),
+            entity.getMonthlyBasicSalary(),
+            entity.getBankName(),
+            entity.getBankAccountMasked(),
+            entity.getPanMasked(),
+            entity.getUanMasked(),
+            entity.getEmail(),
+            entity.getUpdatedAt(),
+            entity.getUpdatedBy()
+        );
     }
 }

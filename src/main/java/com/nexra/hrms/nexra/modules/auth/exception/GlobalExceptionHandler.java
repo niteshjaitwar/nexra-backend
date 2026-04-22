@@ -1,8 +1,10 @@
 package com.nexra.hrms.nexra.modules.auth.exception;
 
-import com.nexra.hrms.nexra.modules.auth.dto.response.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * @version 1.0
  */
 @Slf4j
+@Order(Ordered.HIGHEST_PRECEDENCE + 100)
 @RestControllerAdvice(basePackages = "com.nexra.hrms.nexra.modules.auth")
 public class GlobalExceptionHandler {
 
@@ -29,14 +32,14 @@ public class GlobalExceptionHandler {
      * @return standardized failure response
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<String>> handleValidationException(final MethodArgumentNotValidException exception) {
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(final MethodArgumentNotValidException exception) {
         String errors = exception.getBindingResult()
             .getFieldErrors()
             .stream()
             .map(FieldError::getDefaultMessage)
             .collect(Collectors.joining(", "));
         log.error("GlobalExceptionHandler() - handleValidationException() - Validation failed: {}", errors, exception);
-        return ResponseEntity.badRequest().body(ApiResponse.failure(errors, null));
+        return ResponseEntity.badRequest().body(ApiResponse.failure("VALIDATION_FAILED", errors));
     }
 
     /**
@@ -46,9 +49,9 @@ public class GlobalExceptionHandler {
      * @return standardized failure response
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<String>> handleHttpMessageNotReadableException(final HttpMessageNotReadableException exception) {
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(final HttpMessageNotReadableException exception) {
         log.error("GlobalExceptionHandler() - handleHttpMessageNotReadableException() - Invalid request payload: {}", exception.getMessage(), exception);
-        return ResponseEntity.badRequest().body(ApiResponse.failure("Invalid request payload.", null));
+        return ResponseEntity.badRequest().body(ApiResponse.failure("MALFORMED_JSON", "Invalid request payload."));
     }
 
     /**
@@ -58,9 +61,9 @@ public class GlobalExceptionHandler {
      * @return standardized failure response
      */
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<String>> handleResourceNotFoundException(final ResourceNotFoundException exception) {
+    public ResponseEntity<ApiResponse<Void>> handleResourceNotFoundException(final ResourceNotFoundException exception) {
         log.error("GlobalExceptionHandler() - handleResourceNotFoundException() - Resource missing: {}", exception.getMessage(), exception);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.failure(exception.getMessage(), null));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.failure("NOT_FOUND", exception.getMessage()));
     }
 
     /**
@@ -70,9 +73,9 @@ public class GlobalExceptionHandler {
      * @return standardized failure response
      */
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ApiResponse<String>> handleUnauthorizedException(final UnauthorizedException exception) {
+    public ResponseEntity<ApiResponse<Void>> handleUnauthorizedException(final UnauthorizedException exception) {
         log.error("GlobalExceptionHandler() - handleUnauthorizedException() - Unauthorized access: {}", exception.getMessage(), exception);
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.failure(exception.getMessage(), null));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.failure("UNAUTHORIZED", exception.getMessage()));
     }
 
     /**
@@ -82,9 +85,9 @@ public class GlobalExceptionHandler {
      * @return standardized failure response
      */
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiResponse<String>> handleBusinessException(final BusinessException exception) {
+    public ResponseEntity<ApiResponse<Void>> handleBusinessException(final BusinessException exception) {
         log.error("GlobalExceptionHandler() - handleBusinessException() - Business violation: {}", exception.getMessage(), exception);
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.failure(exception.getMessage(), null));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.failure("BUSINESS_RULE_VIOLATION", exception.getMessage()));
     }
 
     /**
@@ -94,9 +97,9 @@ public class GlobalExceptionHandler {
      * @return standardized failure response
      */
     @ExceptionHandler(RateLimitExceededException.class)
-    public ResponseEntity<ApiResponse<String>> handleRateLimitExceededException(final RateLimitExceededException exception) {
+    public ResponseEntity<ApiResponse<Void>> handleRateLimitExceededException(final RateLimitExceededException exception) {
         log.warn("GlobalExceptionHandler() - handleRateLimitExceededException() - Request throttled: {}", exception.getMessage());
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ApiResponse.failure(exception.getMessage(), null));
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(ApiResponse.failure("RATE_LIMITED", exception.getMessage()));
     }
 
     /**
@@ -106,9 +109,9 @@ public class GlobalExceptionHandler {
      * @return standardized failure response
      */
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<String>> handleAccessDeniedException(final AccessDeniedException exception) {
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(final AccessDeniedException exception) {
         log.error("GlobalExceptionHandler() - handleAccessDeniedException() - Access denied: {}", exception.getMessage(), exception);
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.failure("Access denied.", null));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.failure("FORBIDDEN", "Access denied."));
     }
 
     /**
@@ -118,9 +121,9 @@ public class GlobalExceptionHandler {
      * @return standardized failure response
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<String>> handleUnhandledException(final Exception exception) {
+    public ResponseEntity<ApiResponse<Void>> handleUnhandledException(final Exception exception) {
         log.error("GlobalExceptionHandler() - handleUnhandledException() - Unexpected error: {}", exception.getMessage(), exception);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.failure("An unexpected error occurred.", null));
+            .body(ApiResponse.failure("INTERNAL_ERROR", "An unexpected error occurred."));
     }
 }

@@ -6,7 +6,7 @@ import com.nexra.hrms.nexra.modules.auth.dto.request.OtpVerificationRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.RefreshTokenRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.RegisterRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.VerificationRequest;
-import com.nexra.hrms.nexra.modules.auth.dto.response.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.TokenPairResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.UserProfileResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.VerificationDispatchResponse;

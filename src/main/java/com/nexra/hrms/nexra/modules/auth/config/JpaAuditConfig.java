@@ -1,28 +1,17 @@
 package com.nexra.hrms.nexra.modules.auth.config;
 
-import java.util.Optional;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 /**
- * Enables JPA auditing support for created and updated metadata fields.
+ * Activates Spring Data JPA auditing platform wide. Delegates auditor resolution
+ * to the common AuditorAwareResolver so createdBy and updatedBy fields on the
+ * shared BaseAuditableEntity are populated with the authenticated principal,
+ * falling back to the literal string "system" for background jobs.
  *
  * @author niteshjaitwar
- * @version 1.0
  */
 @Configuration
-@EnableJpaAuditing(auditorAwareRef = "auditorProvider")
+@EnableJpaAuditing(auditorAwareRef = "auditorAwareResolver")
 public class JpaAuditConfig {
-
-    /**
-     * Provides fallback auditor identity for system-generated records.
-     *
-     * @return auditor provider
-     */
-    @Bean
-    public AuditorAware<String> auditorProvider() {
-        return () -> Optional.of("system");
-    }
 }

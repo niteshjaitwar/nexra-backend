@@ -1,7 +1,7 @@
 package com.nexra.hrms.nexra.modules.auth.controller;
 
 import com.nexra.hrms.nexra.modules.auth.dto.request.GrantProductAccessRequest;
-import com.nexra.hrms.nexra.modules.auth.dto.response.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.ProductAccessResponse;
 import com.nexra.hrms.nexra.modules.auth.enums.ProductType;
 import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;

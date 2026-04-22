@@ -6,8 +6,10 @@ import com.nexra.hrms.nexra.modules.payroll.service.PayslipDocumentService;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,11 @@ import org.thymeleaf.context.Context;
 @Slf4j
 public class PayslipDocumentServiceImpl implements PayslipDocumentService {
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final String PNG_MIME_TYPE = "image/png";
+    private static final String JPEG_MIME_TYPE = "image/jpeg";
+    private static final String WEBP_MIME_TYPE = "image/webp";
+
     private final TemplateEngine templateEngine;
     private final PayrollProperties payrollProperties;
 
@@ -45,11 +52,11 @@ public class PayslipDocumentServiceImpl implements PayslipDocumentService {
 
     private String renderTemplate(final String templateName, final PayrollSlip slip) {
         Context context = new Context();
-        context.setVariables(Map.of(
-            "slip", slip,
-            "brand", payrollProperties.getBrand(),
-            "bannerSrc", inlineBannerDataUri()
-        ));
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("slip", slip);
+        variables.put("brand", payrollProperties.getBrand());
+        variables.put("bannerSrc", inlineBannerDataUri());
+        context.setVariables(variables);
         return templateEngine.process(templateName, context);
     }
 
@@ -82,7 +89,6 @@ public class PayslipDocumentServiceImpl implements PayslipDocumentService {
             permission.setCanExtractForAccessibility(true);
             permission.setCanExtractContent(false);
             permission.setCanPrint(true);
-            permission.setCanPrintDegraded(true);
 
             String ownerPassword = randomOwnerPassword();
             StandardProtectionPolicy protectionPolicy = new StandardProtectionPolicy(ownerPassword, "", permission);
@@ -96,19 +102,36 @@ public class PayslipDocumentServiceImpl implements PayslipDocumentService {
 
     private String randomOwnerPassword() {
         byte[] bytes = new byte[24];
-        new SecureRandom().nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private String inlineBannerDataUri() {
         try {
             String bannerPath = payrollProperties.getBrand().getBannerPath();
+            if (bannerPath == null || bannerPath.isBlank()) {
+                return "";
+            }
             String classpathPath = "static" + (bannerPath.startsWith("/") ? bannerPath : "/" + bannerPath);
-            byte[] bytes = new ClassPathResource(classpathPath).getInputStream().readAllBytes();
-            return "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);
+            try (InputStream stream = new ClassPathResource(classpathPath).getInputStream()) {
+                byte[] bytes = stream.readAllBytes();
+                String mimeType = detectMimeType(bannerPath);
+                return "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(bytes);
+            }
         } catch (IOException ex) {
             log.warn("PayslipDocumentServiceImpl - inlineBannerDataUri fallback to path due to error: {}", ex.getMessage());
             return payrollProperties.getBrand().getBannerPath();
         }
+    }
+
+    private String detectMimeType(final String bannerPath) {
+        final String normalized = bannerPath.toLowerCase();
+        if (normalized.endsWith(".jpg") || normalized.endsWith(".jpeg")) {
+            return JPEG_MIME_TYPE;
+        }
+        if (normalized.endsWith(".webp")) {
+            return WEBP_MIME_TYPE;
+        }
+        return PNG_MIME_TYPE;
     }
 }

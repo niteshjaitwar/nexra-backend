@@ -7,6 +7,7 @@ public record AuthenticatedPayrollUser(
     UUID userId,
     String email,
     String tenantCode,
-    Set<String> roles
+    Set<String> roles,
+    Set<String> products
 ) {
 }

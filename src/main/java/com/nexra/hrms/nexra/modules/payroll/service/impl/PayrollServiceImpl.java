@@ -1,8 +1,12 @@
 package com.nexra.hrms.nexra.modules.payroll.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexra.hrms.nexra.modules.payroll.dto.ProfilePayrollGenerationRequest;
 import com.nexra.hrms.nexra.modules.payroll.dto.PayrollGenerationRequest;
 import com.nexra.hrms.nexra.modules.payroll.dto.PayrollLineItemRequest;
+import com.nexra.hrms.nexra.modules.payroll.entity.PayrollSlipEntity;
 import com.nexra.hrms.nexra.modules.payroll.exception.PayrollBusinessException;
 import com.nexra.hrms.nexra.modules.payroll.exception.PayrollResourceNotFoundException;
 import com.nexra.hrms.nexra.modules.payroll.model.AuthDependencyStatus;
@@ -10,6 +14,7 @@ import com.nexra.hrms.nexra.modules.payroll.model.EmployeeProfile;
 import com.nexra.hrms.nexra.modules.payroll.model.OrganizationProfile;
 import com.nexra.hrms.nexra.modules.payroll.model.PayrollLineItem;
 import com.nexra.hrms.nexra.modules.payroll.model.PayrollSlip;
+import com.nexra.hrms.nexra.modules.payroll.repository.PayrollSlipRepository;
 import com.nexra.hrms.nexra.modules.payroll.security.AuthenticatedPayrollUser;
 import com.nexra.hrms.nexra.modules.payroll.service.AuthReferenceClient;
 import com.nexra.hrms.nexra.modules.payroll.service.PayrollService;
@@ -18,11 +23,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Implements payroll generation and payslip retrieval workflows using in-memory slip storage.
@@ -34,19 +38,24 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class PayrollServiceImpl implements PayrollService {
 
-    private final Map<String, PayrollSlip> slips = new ConcurrentHashMap<>();
+    private static final TypeReference<List<PayrollLineItem>> PAYROLL_LINE_ITEMS = new TypeReference<>() { };
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
     private final AuthReferenceClient authReferenceClient;
     private final ProfileDirectoryService profileDirectoryService;
+    private final PayrollSlipRepository payrollSlipRepository;
 
     public PayrollServiceImpl(
         final AuthReferenceClient authReferenceClient,
-        final ProfileDirectoryService profileDirectoryService
+        final ProfileDirectoryService profileDirectoryService,
+        final PayrollSlipRepository payrollSlipRepository
     ) {
         this.authReferenceClient = authReferenceClient;
         this.profileDirectoryService = profileDirectoryService;
+        this.payrollSlipRepository = payrollSlipRepository;
     }
 
     @Override
+    @Transactional
     public PayrollSlip generatePayroll(final PayrollGenerationRequest request, final AuthenticatedPayrollUser actor) {
         if (!actor.tenantCode().equalsIgnoreCase(request.tenantCode())) {
             throw new PayrollBusinessException("Token tenant does not match request tenant");
@@ -81,6 +90,7 @@ public class PayrollServiceImpl implements PayrollService {
     }
 
     @Override
+    @Transactional
     public PayrollSlip generatePayrollFromProfile(
         final ProfilePayrollGenerationRequest request,
         final AuthenticatedPayrollUser actor
@@ -170,7 +180,7 @@ public class PayrollServiceImpl implements PayrollService {
             actor.userId().toString(),
             authHealth
         );
-        slips.put(slip.slipId(), slip);
+        payrollSlipRepository.save(toEntity(slip));
         log.info("PayrollServiceImpl - generatePayrollInternal - slipGenerated slipId={}, tenantCode={}, employeeId={}",
             slip.slipId(), slip.tenantCode(), slip.employeeId());
         return slip;
@@ -178,11 +188,9 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollSlip getSlip(final String slipId) {
-        PayrollSlip slip = slips.get(slipId);
-        if (slip == null) {
-            throw new PayrollResourceNotFoundException("Payroll slip not found: " + slipId);
-        }
-        return slip;
+        return payrollSlipRepository.findById(slipId)
+            .map(this::toModel)
+            .orElseThrow(() -> new PayrollResourceNotFoundException("Payroll slip not found: " + slipId));
     }
 
     @Override
@@ -195,9 +203,8 @@ public class PayrollServiceImpl implements PayrollService {
         if (!actor.tenantCode().equalsIgnoreCase(tenantCode)) {
             throw new PayrollBusinessException("Token tenant does not match requested tenant");
         }
-        return slips.values().stream()
-            .filter(slip -> slip.tenantCode().equalsIgnoreCase(tenantCode))
-            .sorted((left, right) -> right.generatedAt().compareTo(left.generatedAt()))
+        return payrollSlipRepository.findByTenantCodeIgnoreCaseOrderByGeneratedAtDesc(tenantCode.trim().toUpperCase()).stream()
+            .map(this::toModel)
             .toList();
     }
 
@@ -237,6 +244,90 @@ public class PayrollServiceImpl implements PayrollService {
         } catch (PayrollResourceNotFoundException ex) {
             log.debug("PayrollServiceImpl - safeOrganizationProfile - profile unavailable for tenantCode={}", tenantCode);
             return null;
+        }
+    }
+
+    private PayrollSlipEntity toEntity(final PayrollSlip slip) {
+        PayrollSlipEntity entity = new PayrollSlipEntity();
+        entity.setSlipId(slip.slipId());
+        entity.setTenantCode(slip.tenantCode().trim().toUpperCase());
+        entity.setEmployeeId(slip.employeeId());
+        entity.setEmployeeCode(slip.employeeCode());
+        entity.setEmployeeName(slip.employeeName());
+        entity.setDepartment(slip.department());
+        entity.setDesignation(slip.designation());
+        entity.setPayPeriod(slip.payPeriod());
+        entity.setCurrency(slip.currency());
+        entity.setOrganizationProfileJson(writeJson(slip.organizationProfile()));
+        entity.setEmployeeProfileJson(slip.employeeProfile() == null ? null : writeJson(slip.employeeProfile()));
+        entity.setAllowancesJson(writeJson(slip.allowances()));
+        entity.setDeductionsJson(writeJson(slip.deductions()));
+        entity.setAuthDependencyStatusJson(writeJson(slip.authDependencyStatus()));
+        entity.setBasicSalary(slip.basicSalary());
+        entity.setTaxPercent(slip.taxPercent());
+        entity.setProvidentFundPercent(slip.providentFundPercent());
+        entity.setTaxAmount(slip.taxAmount());
+        entity.setProvidentFundAmount(slip.providentFundAmount());
+        entity.setGrossEarnings(slip.grossEarnings());
+        entity.setTotalDeductions(slip.totalDeductions());
+        entity.setNetPay(slip.netPay());
+        entity.setGeneratedAt(slip.generatedAt());
+        entity.setGeneratedByEmail(slip.generatedByEmail());
+        entity.setGeneratedByUserId(slip.generatedByUserId());
+        return entity;
+    }
+
+    private PayrollSlip toModel(final PayrollSlipEntity entity) {
+        return new PayrollSlip(
+            entity.getSlipId(),
+            entity.getTenantCode(),
+            entity.getEmployeeId(),
+            entity.getEmployeeCode(),
+            entity.getEmployeeName(),
+            entity.getDepartment(),
+            entity.getDesignation(),
+            entity.getPayPeriod(),
+            entity.getCurrency(),
+            readJson(entity.getOrganizationProfileJson(), OrganizationProfile.class),
+            entity.getEmployeeProfileJson() == null ? null : readJson(entity.getEmployeeProfileJson(), EmployeeProfile.class),
+            entity.getBasicSalary(),
+            readJson(entity.getAllowancesJson(), PAYROLL_LINE_ITEMS),
+            readJson(entity.getDeductionsJson(), PAYROLL_LINE_ITEMS),
+            entity.getTaxPercent(),
+            entity.getProvidentFundPercent(),
+            entity.getTaxAmount(),
+            entity.getProvidentFundAmount(),
+            entity.getGrossEarnings(),
+            entity.getTotalDeductions(),
+            entity.getNetPay(),
+            entity.getGeneratedAt(),
+            entity.getGeneratedByEmail(),
+            entity.getGeneratedByUserId(),
+            readJson(entity.getAuthDependencyStatusJson(), AuthDependencyStatus.class)
+        );
+    }
+
+    private String writeJson(final Object value) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(value);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to serialize payroll snapshot", exception);
+        }
+    }
+
+    private <T> T readJson(final String value, final Class<T> type) {
+        try {
+            return OBJECT_MAPPER.readValue(value, type);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to deserialize payroll snapshot", exception);
+        }
+    }
+
+    private <T> T readJson(final String value, final TypeReference<T> type) {
+        try {
+            return OBJECT_MAPPER.readValue(value, type);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to deserialize payroll snapshot", exception);
         }
     }
 }

@@ -54,6 +54,7 @@ public class ProductionReadinessValidator implements ApplicationRunner {
     private boolean isNonProductionProfileActive() {
         for (String activeProfile : environment.getActiveProfiles()) {
             if ("dev".equalsIgnoreCase(activeProfile)
+                || "local".equalsIgnoreCase(activeProfile)
                 || "test".equalsIgnoreCase(activeProfile)
                 || "e2e".equalsIgnoreCase(activeProfile)) {
                 return true;

@@ -1,6 +1,6 @@
 package com.nexra.hrms.nexra.modules.auth.controller.dev;
 
-import com.nexra.hrms.nexra.modules.auth.dto.response.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.dev.DevDbStatsResponse;
 import com.nexra.hrms.nexra.modules.auth.repository.RefreshTokenRepository;
 import com.nexra.hrms.nexra.modules.auth.repository.TenantRepository;

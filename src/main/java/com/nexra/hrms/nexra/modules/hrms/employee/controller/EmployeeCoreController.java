@@ -1,6 +1,6 @@
 package com.nexra.hrms.nexra.modules.hrms.employee.controller;
 
-import com.nexra.hrms.nexra.modules.hrms.employee.dto.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.modules.hrms.employee.dto.request.DepartmentUpsertRequest;
 import com.nexra.hrms.nexra.modules.hrms.employee.dto.request.EmployeeUpsertRequest;
 import com.nexra.hrms.nexra.modules.hrms.employee.dto.request.OrganizationProfileUpsertRequest;

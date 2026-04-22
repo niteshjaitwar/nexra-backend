@@ -1,7 +1,7 @@
 package com.nexra.hrms.nexra.modules.payroll.controller;
 
 import com.nexra.hrms.nexra.modules.payroll.config.PayrollProperties;
-import com.nexra.hrms.nexra.modules.payroll.dto.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -27,12 +27,15 @@ public class PayrollJwtService {
 
         @SuppressWarnings("unchecked")
         List<String> roles = claims.get("roles", List.class);
+        @SuppressWarnings("unchecked")
+        List<String> products = claims.get("products", List.class);
 
         return new AuthenticatedPayrollUser(
             UUID.fromString(claims.get("uid", String.class)),
             claims.getSubject(),
             claims.get("tenant", String.class),
-            roles == null ? Set.of() : Set.copyOf(roles)
+            roles == null ? Set.of() : Set.copyOf(roles),
+            products == null ? Set.of() : Set.copyOf(products)
         );
     }
 

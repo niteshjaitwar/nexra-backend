@@ -3,7 +3,7 @@ package com.nexra.hrms.nexra.modules.auth.config;
 import com.nexra.hrms.nexra.modules.auth.security.JwtAuthenticationFilter;
 import com.nexra.hrms.nexra.modules.auth.security.JsonAccessDeniedHandler;
 import com.nexra.hrms.nexra.modules.auth.security.JsonAuthenticationEntryPoint;
-import com.nexra.hrms.nexra.modules.auth.security.RequestCorrelationFilter;
+import com.nexra.hrms.nexra.common.web.SecurityHeadersCustomizer;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +18,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Configures application security boundaries, password encoding, and JWT filter integration.
@@ -41,6 +46,20 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Authorization", "X-Request-Id"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
     /**
      * Configures stateless API security chain for non-authorization-server endpoints.
      *
@@ -54,7 +73,6 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
         final HttpSecurity http,
         final JwtAuthenticationFilter jwtAuthenticationFilter,
-        final RequestCorrelationFilter requestCorrelationFilter,
         final JsonAuthenticationEntryPoint authenticationEntryPoint,
         final JsonAccessDeniedHandler accessDeniedHandler
     ) throws Exception {
@@ -93,7 +111,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/platform/**").hasRole("PLATFORM_ADMIN")
                 .anyRequest().authenticated()
             );
-        http.addFilterBefore(requestCorrelationFilter, UsernamePasswordAuthenticationFilter.class);
+        SecurityHeadersCustomizer.apply(http);
         http
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

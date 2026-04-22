@@ -1,7 +1,7 @@
 package com.nexra.hrms.nexra.modules.auth.controller;
 
 import com.nexra.hrms.nexra.modules.auth.dto.request.OAuthClientCreateRequest;
-import com.nexra.hrms.nexra.modules.auth.dto.response.ApiResponse;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.OAuthClientResponse;
 import com.nexra.hrms.nexra.modules.auth.service.oauth.OAuthClientService;
 import jakarta.validation.Valid;

@@ -4,6 +4,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nexra.hrms.nexra.common.web.SecurityHeadersCustomizer;
 import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -60,6 +61,7 @@ public class AuthorizationServerConfig {
             .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
             .with(authorizationServerConfigurer, Customizer.withDefaults())
             .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated());
+        SecurityHeadersCustomizer.apply(http);
         return http.build();
     }
 
