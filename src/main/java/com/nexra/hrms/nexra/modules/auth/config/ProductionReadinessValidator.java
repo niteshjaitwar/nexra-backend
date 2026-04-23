@@ -45,6 +45,13 @@ public class ProductionReadinessValidator implements ApplicationRunner {
             "AUTH_OAUTH2_KEY_ALIAS must be configured in prod.");
         assertCondition(!isBlank(authProperties.getOauth2().getKeystoreKeyPassword()),
             "AUTH_OAUTH2_KEY_PASSWORD must be configured in prod.");
+        assertCondition(authProperties.getSecurity().getCorsAllowedOrigins() != null
+                && !authProperties.getSecurity().getCorsAllowedOrigins().isEmpty(),
+            "app.auth.security.cors-allowed-origins must include at least one production origin.");
+        assertCondition(authProperties.getSecurity().getCorsAllowedOrigins().stream().noneMatch(this::isLocalOrigin),
+            "app.auth.security.cors-allowed-origins must not include localhost/127.0.0.1 in prod.");
+        assertCondition(Boolean.parseBoolean(environment.getProperty("nexra.common.rate-limit.distributed-enabled", "false")),
+            "nexra.common.rate-limit.distributed-enabled must be true in prod.");
         if (authProperties.getMail().isEnabled()) {
             assertCondition(!isBlank(authProperties.getMail().getFrom()),
                 "AUTH_MAIL_FROM must be configured when mail is enabled in prod.");
@@ -71,5 +78,13 @@ public class ProductionReadinessValidator implements ApplicationRunner {
 
     private boolean isBlank(final String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean isLocalOrigin(final String origin) {
+        if (isBlank(origin)) {
+            return true;
+        }
+        final String normalized = origin.trim().toLowerCase();
+        return normalized.contains("localhost") || normalized.contains("127.0.0.1");
     }
 }

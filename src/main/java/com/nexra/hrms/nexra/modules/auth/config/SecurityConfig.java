@@ -23,6 +23,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Configures application security boundaries, password encoding, and JWT filter integration.
@@ -47,9 +48,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(final AuthProperties authProperties) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        List<String> configuredOrigins = authProperties.getSecurity().getCorsAllowedOrigins();
+        List<String> allowedOrigins = (configuredOrigins == null ? List.<String>of() : configuredOrigins)
+            .stream()
+            .filter(origin -> origin != null && !origin.isBlank())
+            .map(String::trim)
+            .collect(Collectors.toList());
+        if (allowedOrigins.isEmpty()) {
+            allowedOrigins = List.of("http://localhost:4200", "http://127.0.0.1:4200");
+        }
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization", "X-Request-Id"));

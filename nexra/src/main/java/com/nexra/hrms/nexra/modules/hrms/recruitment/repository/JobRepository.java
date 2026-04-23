@@ -1,2 +1,0 @@
-package com.nexra.hrms.nexra.modules.hrms.recruitment.repository; import com.nexra.hrms.nexra.modules.hrms.recruitment.entity.JobEntity; import java.util.*; import org.springframework.data.jpa.repository.JpaRepository;
-public interface JobRepository extends JpaRepository<JobEntity,String>{ Optional<JobEntity> findByTenantCodeAndJobId(String tenantCode,String jobId); List<JobEntity> findByTenantCodeOrderByCreatedAtDesc(String tenantCode); long countByTenantCode(String tenantCode); long countByTenantCodeAndStatus(String tenantCode,String status); }

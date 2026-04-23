@@ -14,6 +14,8 @@ import java.util.List;
  * @param enabled         master switch used to disable rate limiting in tests.
  * @param capacity        maximum number of requests allowed in the burst window.
  * @param refillPeriod    duration over which the bucket refills to capacity.
+ * @param distributedEnabled enables Redis-backed shared limiting for multi-instance deployments.
+ * @param redisKeyPrefix  namespace prefix for Redis rate-limit keys.
  * @param excludedPaths   ant style path patterns excluded from rate limiting.
  * @author niteshjaitwar
  */
@@ -22,6 +24,8 @@ public record RateLimitProperties(
         boolean enabled,
         long capacity,
         Duration refillPeriod,
+        boolean distributedEnabled,
+        String redisKeyPrefix,
         List<String> excludedPaths) {
 
     /**
@@ -31,6 +35,8 @@ public record RateLimitProperties(
      * @param enabled       master switch, defaulting to true when null.
      * @param capacity      bucket capacity, defaulting to 120 when null.
      * @param refillPeriod  refill duration, defaulting to one minute when null.
+     * @param distributedEnabled distributed mode flag, defaulting to false when null.
+     * @param redisKeyPrefix redis key prefix, defaulting to {@code nexra:ratelimit}.
      * @param excludedPaths excluded path patterns, defaulting to actuator and OpenAPI endpoints.
      */
     public RateLimitProperties {
@@ -39,6 +45,9 @@ public record RateLimitProperties(
         }
         if (refillPeriod == null || refillPeriod.isZero() || refillPeriod.isNegative()) {
             refillPeriod = Duration.ofMinutes(1);
+        }
+        if (redisKeyPrefix == null || redisKeyPrefix.isBlank()) {
+            redisKeyPrefix = "nexra:ratelimit";
         }
         if (excludedPaths == null || excludedPaths.isEmpty()) {
             excludedPaths = List.of(

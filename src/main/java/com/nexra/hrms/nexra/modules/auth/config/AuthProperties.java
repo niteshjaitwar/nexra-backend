@@ -7,6 +7,8 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.List;
+
 /**
  * Binds application authentication configuration used by JWT, OTP, OAuth2, mail, and security controls.
  *
@@ -71,6 +73,7 @@ public class AuthProperties {
         @Min(1)
         private int otpWindowMinutes;
         private boolean redisEnabled;
+        private List<String> corsAllowedOrigins = List.of("http://localhost:4200", "http://127.0.0.1:4200");
     }
 
     /**

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.env.Environment;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -22,6 +24,8 @@ class ProductionReadinessValidatorTest {
     void setUp() {
         environment = mock(Environment.class);
         properties = validProductionProperties();
+        when(environment.getProperty("app.auth.bootstrap.enabled", "false")).thenReturn("false");
+        when(environment.getProperty("nexra.common.rate-limit.distributed-enabled", "false")).thenReturn("true");
     }
 
     @Test
@@ -146,6 +150,7 @@ class ProductionReadinessValidatorTest {
 
         config.getMail().setEnabled(false);
         config.getMail().setFrom("noreply@nexra.local");
+        config.getSecurity().setCorsAllowedOrigins(List.of("https://app.nexra.example", "https://hrms.nexra.example"));
         return config;
     }
 }

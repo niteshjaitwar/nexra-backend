@@ -1,2 +1,0 @@
-package com.nexra.hrms.nexra.modules.hrms.performance.dto.request; import jakarta.validation.constraints.*; public record ReviewCreateRequest(@NotBlank @Size(max=64) String tenantCode,@NotBlank @Size(max=36) String employeeId,@NotBlank @Size(max=80) String reviewCycle,@Size(max=2000) String employeeComments) {}
-

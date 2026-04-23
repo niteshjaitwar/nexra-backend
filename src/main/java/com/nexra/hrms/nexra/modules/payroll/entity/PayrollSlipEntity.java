@@ -3,7 +3,6 @@ package com.nexra.hrms.nexra.modules.payroll.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -40,24 +39,19 @@ public class PayrollSlipEntity {
     @Column(name = "currency", nullable = false, length = 10)
     private String currency;
 
-    @Lob
-    @Column(name = "organization_profile_json", nullable = false)
+    @Column(name = "organization_profile_json", nullable = false, columnDefinition = "LONGTEXT")
     private String organizationProfileJson;
 
-    @Lob
-    @Column(name = "employee_profile_json")
+    @Column(name = "employee_profile_json", columnDefinition = "LONGTEXT")
     private String employeeProfileJson;
 
-    @Lob
-    @Column(name = "allowances_json", nullable = false)
+    @Column(name = "allowances_json", nullable = false, columnDefinition = "LONGTEXT")
     private String allowancesJson;
 
-    @Lob
-    @Column(name = "deductions_json", nullable = false)
+    @Column(name = "deductions_json", nullable = false, columnDefinition = "LONGTEXT")
     private String deductionsJson;
 
-    @Lob
-    @Column(name = "auth_dependency_status_json", nullable = false)
+    @Column(name = "auth_dependency_status_json", nullable = false, columnDefinition = "LONGTEXT")
     private String authDependencyStatusJson;
 
     @Column(name = "basic_salary", nullable = false, precision = 19, scale = 2)

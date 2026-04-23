@@ -18,13 +18,16 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Platform wide token bucket rate limiter backed by bucket4j. Buckets are
@@ -45,12 +48,15 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitProperties properties;
     private final ObjectProvider<ObjectMapper> objectMapperProvider;
+    private final ObjectProvider<StringRedisTemplate> redisTemplateProvider;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
             .expireAfterAccess(Duration.ofMinutes(30))
             .maximumSize(100_000)
             .build();
     private volatile ObjectMapper cachedObjectMapper;
+    private volatile StringRedisTemplate cachedRedisTemplate;
+    private final AtomicBoolean redisUnavailableWarningLogged = new AtomicBoolean(false);
 
     /**
      * Builds the filter with injected configuration and a lazy Jackson
@@ -61,10 +67,15 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
      *
      * @param properties           externalised rate limit settings.
      * @param objectMapperProvider lazy Jackson mapper provider.
+     * @param redisTemplateProvider lazy Redis template provider for distributed limiting.
      */
-    public GlobalRateLimitFilter(final RateLimitProperties properties, final ObjectProvider<ObjectMapper> objectMapperProvider) {
+    public GlobalRateLimitFilter(
+            final RateLimitProperties properties,
+            final ObjectProvider<ObjectMapper> objectMapperProvider,
+            final ObjectProvider<StringRedisTemplate> redisTemplateProvider) {
         this.properties = properties;
         this.objectMapperProvider = objectMapperProvider;
+        this.redisTemplateProvider = redisTemplateProvider;
     }
 
     /**
@@ -85,6 +96,15 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
             cachedObjectMapper = mapper;
         }
         return mapper;
+    }
+
+    private StringRedisTemplate resolveRedisTemplate() {
+        StringRedisTemplate template = cachedRedisTemplate;
+        if (template == null) {
+            template = redisTemplateProvider.getIfAvailable();
+            cachedRedisTemplate = template;
+        }
+        return template;
     }
 
     /**
@@ -127,6 +147,19 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
             final HttpServletResponse response,
             final FilterChain filterChain) throws ServletException, IOException {
         final String key = resolveBucketKey(request);
+        if (properties.distributedEnabled()) {
+            final DistributedProbe distributedProbe = tryConsumeDistributed(key);
+            if (distributedProbe != null) {
+                if (distributedProbe.consumed()) {
+                    response.setHeader("X-RateLimit-Limit", String.valueOf(properties.capacity()));
+                    response.setHeader("X-RateLimit-Remaining", String.valueOf(distributedProbe.remainingTokens()));
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                writeRateLimitError(response, key, distributedProbe.retryAfterSeconds());
+                return;
+            }
+        }
         final Bucket bucket = buckets.asMap().computeIfAbsent(key, ignored -> newBucket());
         final ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1L);
         if (probe.isConsumed()) {
@@ -136,6 +169,35 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
             return;
         }
         final long retryAfterSeconds = Math.max(1L, TimeUnit.NANOSECONDS.toSeconds(probe.getNanosToWaitForRefill()));
+        writeRateLimitError(response, key, retryAfterSeconds);
+    }
+
+    private DistributedProbe tryConsumeDistributed(final String key) {
+        final StringRedisTemplate redisTemplate = resolveRedisTemplate();
+        if (redisTemplate == null) {
+            if (redisUnavailableWarningLogged.compareAndSet(false, true)) {
+                log.warn("GlobalRateLimitFilter - Redis template unavailable, falling back to in-memory rate limiting.");
+            }
+            return null;
+        }
+        final Duration period = resolvePeriod();
+        final long windowSeconds = Math.max(1L, period.toSeconds());
+        final long nowEpochSeconds = Instant.now().getEpochSecond();
+        final long windowId = nowEpochSeconds / windowSeconds;
+        final long retryAfterSeconds = Math.max(1L, windowSeconds - (nowEpochSeconds % windowSeconds));
+        final String redisKey = properties.redisKeyPrefix() + ":" + windowId + ":" + key;
+        final Long used = redisTemplate.opsForValue().increment(redisKey);
+        if (used == null) {
+            return null;
+        }
+        if (used == 1L) {
+            redisTemplate.expire(redisKey, Duration.ofSeconds(windowSeconds + 1L));
+        }
+        final long remaining = Math.max(0L, properties.capacity() - used);
+        return new DistributedProbe(used <= properties.capacity(), remaining, retryAfterSeconds);
+    }
+
+    private void writeRateLimitError(final HttpServletResponse response, final String key, final long retryAfterSeconds) throws IOException {
         log.warn("GlobalRateLimitFilter - doFilterInternal() - throttle key={}, retryAfterSeconds={}", key, retryAfterSeconds);
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -196,4 +258,6 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
                 ? Duration.ofMinutes(1)
                 : properties.refillPeriod();
     }
+
+    private record DistributedProbe(boolean consumed, long remainingTokens, long retryAfterSeconds) {}
 }
