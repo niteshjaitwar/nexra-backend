@@ -2,6 +2,9 @@ target/
 .env
 .env.local
 .mvn/wrapper/maven-wrapper.jar
+.graphify_python
+graphify-out/
+run-dev.ps1
 
 ### IDE ###
 .idea/

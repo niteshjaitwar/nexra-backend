@@ -1,5 +1,6 @@
 package com.nexra.hrms.nexra.modules.payroll.entity;
 
+import com.nexra.hrms.nexra.common.persistence.BaseAuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -7,9 +8,16 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+/**
+ * Persists immutable payroll slip snapshots generated for a tenant employee
+ * and pay period. The entity extends the shared auditable base to enforce
+ * optimistic locking and common audit metadata standards across modules.
+ *
+ * @author niteshjaitwar
+ */
 @Entity
 @Table(name = "payroll_slips")
-public class PayrollSlipEntity {
+public class PayrollSlipEntity extends BaseAuditableEntity {
 
     @Id
     @Column(name = "slip_id", nullable = false, length = 36)
