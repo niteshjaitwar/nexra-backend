@@ -1,5 +1,6 @@
 package com.nexra.hrms.nexra.modules.hrms.recruitment.service.impl;
 
+import com.nexra.hrms.nexra.common.api.PageResponse;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.dto.request.CandidateCreateRequest;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.dto.request.CandidateStageChangeRequest;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.dto.request.JobUpsertRequest;
@@ -23,6 +24,9 @@ import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -275,5 +279,48 @@ public class RecruitmentServiceImpl implements IRecruitmentService {
 
     private String trim(final String value) {
         return value == null ? null : value.trim();
+    }
+
+    @Override
+    public PageResponse<JobView> listJobs(
+        final String tenantCode,
+        final String status,
+        final AuthenticatedRecruitmentUser actor,
+        final Pageable pageable
+    ) {
+        assertTenant(tenantCode, actor);
+        String tenant = normalizeTenant(tenantCode);
+        String statusFilter = blankToNullUpper(status);
+        Page<JobEntity> jobsPage = statusFilter == null
+            ? jobRepository.findByTenantCode(tenant, pageable)
+            : jobRepository.findByTenantCodeAndStatusIgnoreCase(tenant, statusFilter, pageable);
+        return PageResponse.from(jobsPage.map(this::toJobView));
+    }
+
+    @Override
+    public PageResponse<CandidateView> listCandidates(
+        final String tenantCode,
+        final String jobId,
+        final String stage,
+        final AuthenticatedRecruitmentUser actor,
+        final Pageable pageable
+    ) {
+        assertTenant(tenantCode, actor);
+        String tenant = normalizeTenant(tenantCode);
+        String jobFilter = blankToNull(jobId);
+        String stageFilter = blankToNullUpper(stage);
+        Page<CandidateEntity> candidatesPage;
+        if (jobFilter != null && stageFilter != null) {
+            candidatesPage = candidateRepository.findByTenantCodeAndJobIdAndStageIgnoreCase(
+                tenant, jobFilter, stageFilter, pageable
+            );
+        } else if (jobFilter != null) {
+            candidatesPage = candidateRepository.findByTenantCodeAndJobId(tenant, jobFilter, pageable);
+        } else if (stageFilter != null) {
+            candidatesPage = candidateRepository.findByTenantCodeAndStageIgnoreCase(tenant, stageFilter, pageable);
+        } else {
+            candidatesPage = candidateRepository.findByTenantCode(tenant, pageable);
+        }
+        return PageResponse.from(candidatesPage.map(this::toCandidateView));
     }
 }

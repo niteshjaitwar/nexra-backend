@@ -89,6 +89,10 @@ src/main/java/com/nexra/hrms/nexra/
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
+`dev` uses local workstation defaults for the auth datasource and auth secrets.
+Override them with `AUTH_DB_*`, `AUTH_JWT_SECRET`, and
+`AUTH_OAUTH2_DEFAULT_CLIENT_SECRET` when your local MySQL credentials differ.
+
 ## Verify Quality Gates
 
 ```bash
