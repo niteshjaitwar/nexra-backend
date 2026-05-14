@@ -37,6 +37,7 @@ class PayrollServiceTest {
         when(payrollSlipRepository.save(any(PayrollSlipEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         PayrollService payrollService = new PayrollServiceImpl(
+            new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules(),
             authReferenceClient,
             profileDirectoryService,
             payrollSlipRepository

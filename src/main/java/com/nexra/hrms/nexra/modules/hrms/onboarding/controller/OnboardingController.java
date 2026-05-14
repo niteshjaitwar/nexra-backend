@@ -11,7 +11,7 @@ import com.nexra.hrms.nexra.modules.hrms.onboarding.model.OnboardingSummaryView;
 import com.nexra.hrms.nexra.modules.hrms.onboarding.model.OnboardingTaskView;
 import com.nexra.hrms.nexra.modules.hrms.onboarding.security.AuthenticatedOnboardingUser;
 import com.nexra.hrms.nexra.modules.hrms.onboarding.security.OnboardingAuthFilter;
-import com.nexra.hrms.nexra.modules.hrms.onboarding.service.OnboardingService;
+import com.nexra.hrms.nexra.modules.hrms.onboarding.service.IOnboardingService;
 import com.nexra.hrms.nexra.modules.hrms.employee.validation.TenantCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -45,7 +45,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public class OnboardingController {
 
-    private final OnboardingService onboardingService;
+    private final IOnboardingService onboardingService;
 
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> status() {

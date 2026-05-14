@@ -11,7 +11,7 @@ import com.nexra.hrms.nexra.modules.hrms.performance.model.PerformanceSummaryVie
 import com.nexra.hrms.nexra.modules.hrms.performance.model.ReviewView;
 import com.nexra.hrms.nexra.modules.hrms.performance.security.AuthenticatedPerformanceUser;
 import com.nexra.hrms.nexra.modules.hrms.performance.security.PerformanceAuthFilter;
-import com.nexra.hrms.nexra.modules.hrms.performance.service.PerformanceService;
+import com.nexra.hrms.nexra.modules.hrms.performance.service.IPerformanceService;
 import com.nexra.hrms.nexra.modules.hrms.employee.validation.TenantCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -44,7 +44,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public class PerformanceController {
 
-    private final PerformanceService performanceService;
+    private final IPerformanceService performanceService;
 
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> status() {

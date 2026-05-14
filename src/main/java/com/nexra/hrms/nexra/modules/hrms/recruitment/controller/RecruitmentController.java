@@ -12,7 +12,7 @@ import com.nexra.hrms.nexra.modules.hrms.recruitment.model.JobView;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.model.RecruitmentSummaryView;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.security.AuthenticatedRecruitmentUser;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.security.RecruitmentAuthFilter;
-import com.nexra.hrms.nexra.modules.hrms.recruitment.service.RecruitmentService;
+import com.nexra.hrms.nexra.modules.hrms.recruitment.service.IRecruitmentService;
 import com.nexra.hrms.nexra.modules.hrms.employee.validation.TenantCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -45,7 +45,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public class RecruitmentController {
 
-    private final RecruitmentService recruitmentService;
+    private final IRecruitmentService recruitmentService;
 
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> status() {

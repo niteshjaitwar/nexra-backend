@@ -39,16 +39,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class PayrollServiceImpl implements PayrollService {
 
     private static final TypeReference<List<PayrollLineItem>> PAYROLL_LINE_ITEMS = new TypeReference<>() { };
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper;
     private final AuthReferenceClient authReferenceClient;
     private final ProfileDirectoryService profileDirectoryService;
     private final PayrollSlipRepository payrollSlipRepository;
 
     public PayrollServiceImpl(
+        final ObjectMapper objectMapper,
         final AuthReferenceClient authReferenceClient,
         final ProfileDirectoryService profileDirectoryService,
         final PayrollSlipRepository payrollSlipRepository
     ) {
+        this.objectMapper = objectMapper;
         this.authReferenceClient = authReferenceClient;
         this.profileDirectoryService = profileDirectoryService;
         this.payrollSlipRepository = payrollSlipRepository;
@@ -309,7 +311,7 @@ public class PayrollServiceImpl implements PayrollService {
 
     private String writeJson(final Object value) {
         try {
-            return OBJECT_MAPPER.writeValueAsString(value);
+            return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize payroll snapshot", exception);
         }
@@ -317,7 +319,7 @@ public class PayrollServiceImpl implements PayrollService {
 
     private <T> T readJson(final String value, final Class<T> type) {
         try {
-            return OBJECT_MAPPER.readValue(value, type);
+            return objectMapper.readValue(value, type);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to deserialize payroll snapshot", exception);
         }
@@ -325,7 +327,7 @@ public class PayrollServiceImpl implements PayrollService {
 
     private <T> T readJson(final String value, final TypeReference<T> type) {
         try {
-            return OBJECT_MAPPER.readValue(value, type);
+            return objectMapper.readValue(value, type);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to deserialize payroll snapshot", exception);
         }
