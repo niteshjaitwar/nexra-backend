@@ -233,6 +233,7 @@ public class EmployeeCoreServiceImpl implements EmployeeCoreService {
         entity.setPanMasked(blankToNull(request.panMasked()));
         entity.setUanMasked(blankToNull(request.uanMasked()));
         entity.setActive(request.active() == null || request.active());
+        entity.setUserAccountId(blankToNull(request.userAccountId()));
         entity.setUpdatedBy(actor.email());
 
         return toModel(employeeRepository.save(entity));
@@ -346,7 +347,8 @@ public class EmployeeCoreServiceImpl implements EmployeeCoreService {
             entity.getUanMasked(),
             entity.isActive(),
             entity.getUpdatedAt(),
-            entity.getUpdatedBy()
+            entity.getUpdatedBy(),
+            entity.getUserAccountId()
         );
     }
 

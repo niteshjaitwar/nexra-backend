@@ -23,6 +23,7 @@ public record Employee(
     String uanMasked,
     boolean active,
     Instant updatedAt,
-    String updatedBy
+    String updatedBy,
+    String userAccountId
 ) {
 }

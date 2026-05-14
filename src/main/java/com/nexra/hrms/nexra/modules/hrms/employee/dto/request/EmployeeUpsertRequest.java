@@ -22,9 +22,10 @@ public record EmployeeUpsertRequest(
     @NotNull LocalDate joinDate,
     @NotNull @DecimalMin("0.00") BigDecimal monthlyBasicSalary,
     @Size(max = 120) String bankName,
-    @Size(max = 50) String bankAccountMasked,
+    @Size(max = 36) String bankAccountMasked,
     @Size(max = 30) String panMasked,
     @Size(max = 30) String uanMasked,
-    Boolean active
+    Boolean active,
+    @Size(max = 36) String userAccountId
 ) {
 }

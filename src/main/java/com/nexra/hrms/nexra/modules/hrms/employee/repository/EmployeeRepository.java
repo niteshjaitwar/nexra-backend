@@ -12,4 +12,5 @@ public interface EmployeeRepository extends JpaRepository<EmployeeEntity, String
     Optional<EmployeeEntity> findByTenantCodeIgnoreCaseAndEmployeeCodeIgnoreCase(String tenantCode, String employeeCode);
     Optional<EmployeeEntity> findByTenantCodeIgnoreCaseAndWorkEmailIgnoreCase(String tenantCode, String workEmail);
     long countByTenantCodeIgnoreCaseAndActiveTrue(String tenantCode);
+    Optional<EmployeeEntity> findByTenantCodeIgnoreCaseAndUserAccountId(String tenantCode, String userAccountId);
 }

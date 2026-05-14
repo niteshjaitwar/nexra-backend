@@ -58,6 +58,9 @@ public class EmployeeEntity extends AbstractAuditableEntity {
     @Column(name = "uan_masked", length = 30)
     private String uanMasked;
 
+    @Column(name = "user_account_id", length = 36)
+    private String userAccountId;
+
     @Column(name = "active", nullable = false)
     private boolean active;
 
@@ -93,4 +96,6 @@ public class EmployeeEntity extends AbstractAuditableEntity {
     public void setUanMasked(final String uanMasked) { this.uanMasked = uanMasked; }
     public boolean isActive() { return active; }
     public void setActive(final boolean active) { this.active = active; }
+    public String getUserAccountId() { return userAccountId; }
+    public void setUserAccountId(final String userAccountId) { this.userAccountId = userAccountId; }
 }

@@ -22,6 +22,7 @@ import com.nexra.hrms.nexra.modules.hrms.leave.repository.LeaveRequestRepository
 import com.nexra.hrms.nexra.modules.hrms.leave.repository.LeaveTypeRepository;
 import com.nexra.hrms.nexra.modules.hrms.leave.security.AuthenticatedLeaveUser;
 import com.nexra.hrms.nexra.modules.hrms.leave.service.LeaveManagementService;
+import com.nexra.hrms.nexra.modules.hrms.employee.repository.EmployeeRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -53,6 +54,7 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
     private final HolidayRepository holidayRepository;
     private final LeaveBalanceRepository leaveBalanceRepository;
     private final LeaveRequestRepository leaveRequestRepository;
+    private final EmployeeRepository employeeRepository;
 
     @Override
     @Transactional
@@ -338,7 +340,15 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
     }
 
     private boolean requestingOwnEmployee(final AuthenticatedLeaveUser actor, final String employeeId) {
-        return trim(employeeId).equalsIgnoreCase(actor.userId().toString());
+        if (employeeId == null || employeeId.isBlank()) {
+            return false;
+        }
+        // Look up the employee and compare their userAccountId against the actor's auth userId.
+        // This is the correct comparison: employeeId is the HR business ID, userId is the auth UUID.
+        return employeeRepository.findByTenantCodeIgnoreCaseAndUserAccountId(
+            actor.tenantCode(),
+            actor.userId().toString()
+        ).map(emp -> emp.getId().equalsIgnoreCase(employeeId)).orElse(false);
     }
 
     private void verifyTenant(final AuthenticatedLeaveUser actor, final String tenantCode) {
