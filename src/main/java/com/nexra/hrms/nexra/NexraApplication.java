@@ -2,6 +2,8 @@ package com.nexra.hrms.nexra;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Bootstraps the Nexra modular monolith container.
@@ -10,6 +12,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @version 1.0
  */
 @SpringBootApplication
+@EnableAsync
+@EnableScheduling
 public class NexraApplication {
 
     public static void main(final String[] args) {
