@@ -3,6 +3,8 @@ package com.nexra.hrms.nexra.modules.hrms.expense.repository;
 import com.nexra.hrms.nexra.modules.hrms.expense.entity.ExpenseClaimEntity;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ExpenseClaimRepository extends JpaRepository<ExpenseClaimEntity, String> {
@@ -10,5 +12,10 @@ public interface ExpenseClaimRepository extends JpaRepository<ExpenseClaimEntity
     List<ExpenseClaimEntity> findByTenantCodeIgnoreCaseOrderByCreatedAtDesc(String tenantCode);
     List<ExpenseClaimEntity> findByTenantCodeIgnoreCaseAndEmployeeIdOrderByCreatedAtDesc(String tenantCode, String employeeId);
     List<ExpenseClaimEntity> findByTenantCodeIgnoreCaseAndStatusIgnoreCaseOrderByCreatedAtDesc(String tenantCode, String status);
-}
 
+    // Paginated queries
+    Page<ExpenseClaimEntity> findByTenantCodeIgnoreCase(String tenantCode, Pageable pageable);
+    Page<ExpenseClaimEntity> findByTenantCodeIgnoreCaseAndEmployeeId(String tenantCode, String employeeId, Pageable pageable);
+    Page<ExpenseClaimEntity> findByTenantCodeIgnoreCaseAndStatusIgnoreCase(String tenantCode, String status, Pageable pageable);
+    Page<ExpenseClaimEntity> findByTenantCodeIgnoreCaseAndEmployeeIdAndStatusIgnoreCase(String tenantCode, String employeeId, String status, Pageable pageable);
+}

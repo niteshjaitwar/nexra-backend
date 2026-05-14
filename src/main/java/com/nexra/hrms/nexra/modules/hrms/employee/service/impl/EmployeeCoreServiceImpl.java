@@ -15,6 +15,7 @@ import com.nexra.hrms.nexra.modules.hrms.employee.repository.DepartmentRepositor
 import com.nexra.hrms.nexra.modules.hrms.employee.repository.EmployeeRepository;
 import com.nexra.hrms.nexra.modules.hrms.employee.repository.OrganizationProfileRepository;
 import com.nexra.hrms.nexra.modules.hrms.employee.security.AuthenticatedEmployeeCoreUser;
+import com.nexra.hrms.nexra.common.api.PageResponse;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
@@ -265,6 +266,37 @@ public class EmployeeCoreServiceImpl implements EmployeeCoreService {
             .sorted(Comparator.comparing(EmployeeEntity::getEmployeeCode, String.CASE_INSENSITIVE_ORDER))
             .map(this::toModel)
             .toList();
+    }
+
+    @Override
+    public PageResponse<Employee> listEmployees(
+        final String tenantCode,
+        final String departmentId,
+        final boolean includeInactive,
+        final AuthenticatedEmployeeCoreUser actor,
+        final org.springframework.data.domain.Pageable pageable
+    ) {
+        verifyTenant(actor, tenantCode);
+        String tenant = normTenant(tenantCode);
+        log.debug(
+            "EmployeeCoreServiceImpl - listEmployees(paginated) - tenantCode={}, departmentId={}, includeInactive={}, page={}, size={}, actor={}",
+            tenant, departmentId, includeInactive, pageable.getPageNumber(), pageable.getPageSize(), actor.email()
+        );
+        String departmentFilter = blankToNull(departmentId);
+        org.springframework.data.domain.Page<EmployeeEntity> page;
+        if (departmentFilter == null) {
+            page = includeInactive
+                ? employeeRepository.findByTenantCodeIgnoreCase(tenant, pageable)
+                : employeeRepository.findByTenantCodeIgnoreCaseAndActiveTrue(tenant, pageable);
+        } else {
+            page = includeInactive
+                ? employeeRepository.findByTenantCodeIgnoreCaseAndDepartmentId(tenant, departmentFilter, pageable)
+                : employeeRepository.findByTenantCodeIgnoreCaseAndDepartmentIdAndActiveTrue(tenant, departmentFilter, pageable);
+        }
+        return com.nexra.hrms.nexra.common.api.PageResponse.map(
+            com.nexra.hrms.nexra.common.api.PageResponse.from(page),
+            this::toModel
+        );
     }
 
     @Override

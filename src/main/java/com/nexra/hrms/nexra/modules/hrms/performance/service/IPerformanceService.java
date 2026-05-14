@@ -9,6 +9,8 @@ import com.nexra.hrms.nexra.modules.hrms.performance.model.ReviewView;
 import com.nexra.hrms.nexra.modules.hrms.performance.security.AuthenticatedPerformanceUser;
 
 import java.util.List;
+import org.springframework.data.domain.Pageable;
+import com.nexra.hrms.nexra.common.api.PageResponse;
 
 /**
  * Service contract for tenant-scoped performance goal and review workflows.
@@ -36,6 +38,9 @@ public interface IPerformanceService {
      * @return filtered list of goal views
      */
     List<GoalView> listGoals(String tenantCode, String employeeId, String status, AuthenticatedPerformanceUser actor);
+
+    /** Paginated goal listing. */
+    PageResponse<GoalView> listGoals(String tenantCode, String employeeId, String status, AuthenticatedPerformanceUser actor, Pageable pageable);
 
     /**
      * Creates a new performance review cycle for an employee.
@@ -66,6 +71,9 @@ public interface IPerformanceService {
      * @return filtered list of review views
      */
     List<ReviewView> listReviews(String tenantCode, String employeeId, String status, AuthenticatedPerformanceUser actor);
+
+    /** Paginated review listing. */
+    PageResponse<ReviewView> listReviews(String tenantCode, String employeeId, String status, AuthenticatedPerformanceUser actor, Pageable pageable);
 
     /**
      * Returns aggregated performance summary for a tenant.

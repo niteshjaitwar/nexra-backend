@@ -166,6 +166,30 @@ public class TimesheetServiceImpl implements TimesheetService {
             .toList();
     }
 
+    @Override
+    public com.nexra.hrms.nexra.common.api.PageResponse<TimesheetEntryView> listEntries(
+        final String tenantCode,
+        final String employeeId,
+        final LocalDate fromDate,
+        final LocalDate toDate,
+        final AuthenticatedTimesheetUser actor,
+        final org.springframework.data.domain.Pageable pageable
+    ) {
+        verifyTenant(actor, tenantCode);
+        String employee = trim(employeeId);
+        ensureSelfOrAdmin(actor, employee);
+        LocalDate from = fromDate == null ? LocalDate.now().minusDays(30) : fromDate;
+        LocalDate to = toDate == null ? LocalDate.now() : toDate;
+        if (to.isBefore(from)) {
+            throw new TimesheetBusinessException("toDate must be on or after fromDate");
+        }
+        org.springframework.data.domain.Page<TimesheetEntryEntity> page =
+            entryRepository.findByTenantCodeIgnoreCaseAndEmployeeIdAndWorkDateBetween(normTenant(tenantCode), employee, from, to, pageable);
+        return com.nexra.hrms.nexra.common.api.PageResponse.map(
+            com.nexra.hrms.nexra.common.api.PageResponse.from(page), this::toEntry
+        );
+    }
+
     /**
      * Gets a single timesheet entry.
      *

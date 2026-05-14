@@ -164,15 +164,20 @@ public class LeaveManagementController {
     }
 
     @GetMapping("/requests")
-    public ResponseEntity<ApiResponse<List<LeaveRequestView>>> listLeaveRequests(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<LeaveRequestView>>> listLeaveRequests(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String employeeId,
         @RequestParam(required = false) final String status,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("createdAt").descending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Leave requests fetched successfully.",
-            leaveManagementService.listLeaveRequests(tenantCode, employeeId, status, currentUser(httpRequest))
+            leaveManagementService.listLeaveRequests(tenantCode, employeeId, status, currentUser(httpRequest), pageable)
         ));
     }
 

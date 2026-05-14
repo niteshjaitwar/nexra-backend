@@ -87,6 +87,34 @@ public class PerformanceServiceImpl implements IPerformanceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public com.nexra.hrms.nexra.common.api.PageResponse<GoalView> listGoals(
+        final String tenantCode,
+        final String employeeId,
+        final String status,
+        final AuthenticatedPerformanceUser actor,
+        final org.springframework.data.domain.Pageable pageable
+    ) {
+        assertTenant(tenantCode, actor);
+        String tenant = normalizeTenant(tenantCode);
+        String employeeFilter = blankToNull(employeeId);
+        String statusFilter = blankToNullUpper(status);
+        org.springframework.data.domain.Page<GoalEntity> page;
+        if (employeeFilter == null && statusFilter == null) {
+            page = goalRepository.findByTenantCode(tenant, pageable);
+        } else if (employeeFilter != null && statusFilter == null) {
+            page = goalRepository.findByTenantCodeAndEmployeeId(tenant, employeeFilter, pageable);
+        } else if (employeeFilter == null) {
+            page = goalRepository.findByTenantCodeAndStatusIgnoreCase(tenant, statusFilter, pageable);
+        } else {
+            page = goalRepository.findByTenantCodeAndEmployeeIdAndStatusIgnoreCase(tenant, employeeFilter, statusFilter, pageable);
+        }
+        return com.nexra.hrms.nexra.common.api.PageResponse.map(
+            com.nexra.hrms.nexra.common.api.PageResponse.from(page), this::toGoalView
+        );
+    }
+
+    @Override
     @Transactional
     public ReviewView createReview(
         final ReviewCreateRequest request,
@@ -147,6 +175,34 @@ public class PerformanceServiceImpl implements IPerformanceService {
             .filter(review -> statusFilter == null || statusFilter.equalsIgnoreCase(review.getStatus()))
             .map(this::toReviewView)
             .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public com.nexra.hrms.nexra.common.api.PageResponse<ReviewView> listReviews(
+        final String tenantCode,
+        final String employeeId,
+        final String status,
+        final AuthenticatedPerformanceUser actor,
+        final org.springframework.data.domain.Pageable pageable
+    ) {
+        assertTenant(tenantCode, actor);
+        String tenant = normalizeTenant(tenantCode);
+        String employeeFilter = blankToNull(employeeId);
+        String statusFilter = blankToNullUpper(status);
+        org.springframework.data.domain.Page<ReviewEntity> page;
+        if (employeeFilter == null && statusFilter == null) {
+            page = reviewRepository.findByTenantCode(tenant, pageable);
+        } else if (employeeFilter != null && statusFilter == null) {
+            page = reviewRepository.findByTenantCodeAndEmployeeId(tenant, employeeFilter, pageable);
+        } else if (employeeFilter == null) {
+            page = reviewRepository.findByTenantCodeAndStatusIgnoreCase(tenant, statusFilter, pageable);
+        } else {
+            page = reviewRepository.findByTenantCodeAndEmployeeIdAndStatusIgnoreCase(tenant, employeeFilter, statusFilter, pageable);
+        }
+        return com.nexra.hrms.nexra.common.api.PageResponse.map(
+            com.nexra.hrms.nexra.common.api.PageResponse.from(page), this::toReviewView
+        );
     }
 
     @Override

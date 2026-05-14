@@ -222,6 +222,34 @@ public class AttendanceServiceImpl implements AttendanceService {
             .toList();
     }
 
+    @Override
+    public com.nexra.hrms.nexra.common.api.PageResponse<AttendanceRecordView> listRecords(
+        final String tenantCode,
+        final String employeeId,
+        final LocalDate fromDate,
+        final LocalDate toDate,
+        final AuthenticatedAttendanceUser actor,
+        final org.springframework.data.domain.Pageable pageable
+    ) {
+        verifyTenant(actor, tenantCode);
+        LocalDate from = fromDate == null ? LocalDate.now().minusDays(30) : fromDate;
+        LocalDate to = toDate == null ? LocalDate.now() : toDate;
+        if (to.isBefore(from)) {
+            throw new AttendanceBusinessException("toDate must be on or after fromDate");
+        }
+        String employeeFilter = blankToNull(employeeId);
+        if (employeeFilter != null) {
+            ensureSelfOrAdmin(actor, employeeFilter);
+        }
+        org.springframework.data.domain.Page<com.nexra.hrms.nexra.modules.hrms.attendance.entity.AttendanceRecordEntity> page =
+            employeeFilter == null
+                ? attendanceRecordRepository.findByTenantCodeIgnoreCaseAndWorkDateBetween(normTenant(tenantCode), from, to, pageable)
+                : attendanceRecordRepository.findByTenantCodeIgnoreCaseAndEmployeeIdAndWorkDateBetween(normTenant(tenantCode), employeeFilter, from, to, pageable);
+        return com.nexra.hrms.nexra.common.api.PageResponse.map(
+            com.nexra.hrms.nexra.common.api.PageResponse.from(page), this::toModel
+        );
+    }
+
     /**
      * Computes summarized attendance metrics for the selected scope.
      *

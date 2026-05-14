@@ -78,15 +78,20 @@ public class PerformanceController {
     }
 
     @GetMapping("/goals")
-    public ResponseEntity<ApiResponse<List<GoalView>>> listGoals(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<GoalView>>> listGoals(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String employeeId,
         @RequestParam(required = false) final String status,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("createdAt").descending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Goals fetched successfully.",
-            performanceService.listGoals(tenantCode, employeeId, status, currentUser(httpRequest))
+            performanceService.listGoals(tenantCode, employeeId, status, currentUser(httpRequest), pageable)
         ));
     }
 
@@ -118,15 +123,20 @@ public class PerformanceController {
     }
 
     @GetMapping("/reviews")
-    public ResponseEntity<ApiResponse<List<ReviewView>>> listReviews(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<ReviewView>>> listReviews(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String employeeId,
         @RequestParam(required = false) final String status,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("createdAt").descending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Reviews fetched successfully.",
-            performanceService.listReviews(tenantCode, employeeId, status, currentUser(httpRequest))
+            performanceService.listReviews(tenantCode, employeeId, status, currentUser(httpRequest), pageable)
         ));
     }
 

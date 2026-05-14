@@ -4,6 +4,8 @@ import com.nexra.hrms.nexra.modules.hrms.attendance.entity.AttendanceRecordEntit
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AttendanceRecordRepository extends JpaRepository<AttendanceRecordEntity, String> {
@@ -12,5 +14,8 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     List<AttendanceRecordEntity> findByTenantCodeIgnoreCaseAndEmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
         String tenantCode, String employeeId, LocalDate fromDate, LocalDate toDate
     );
-}
 
+    // Paginated queries
+    Page<AttendanceRecordEntity> findByTenantCodeIgnoreCaseAndWorkDateBetween(String tenantCode, LocalDate fromDate, LocalDate toDate, Pageable pageable);
+    Page<AttendanceRecordEntity> findByTenantCodeIgnoreCaseAndEmployeeIdAndWorkDateBetween(String tenantCode, String employeeId, LocalDate fromDate, LocalDate toDate, Pageable pageable);
+}

@@ -141,16 +141,21 @@ public class ExpenseController {
      * @return claims response
      */
     @GetMapping("/claims")
-    public ResponseEntity<ApiResponse<List<ExpenseClaimView>>> listClaims(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<ExpenseClaimView>>> listClaims(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String employeeId,
         @RequestParam(required = false) final String status,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
         log.debug("ExpenseController - listClaims - tenantCode={}, employeeId={}, status={}", tenantCode, employeeId, status);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("createdAt").descending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Expense claims fetched successfully.",
-            expenseService.listClaims(tenantCode, employeeId, status, currentUser(httpRequest))
+            expenseService.listClaims(tenantCode, employeeId, status, currentUser(httpRequest), pageable)
         ));
     }
 

@@ -166,15 +166,20 @@ public class EmployeeCoreController {
     }
 
     @GetMapping("/employees")
-    public ResponseEntity<ApiResponse<List<Employee>>> listEmployees(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<Employee>>> listEmployees(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) @Size(max = 36) final String departmentId,
         @RequestParam(defaultValue = "false") final boolean includeInactive,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("employeeCode").ascending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Employees fetched successfully.",
-            employeeCoreService.listEmployees(tenantCode, departmentId, includeInactive, currentUser(httpRequest))
+            employeeCoreService.listEmployees(tenantCode, departmentId, includeInactive, currentUser(httpRequest), pageable)
         ));
     }
 

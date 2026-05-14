@@ -9,6 +9,8 @@ import com.nexra.hrms.nexra.modules.hrms.timesheet.security.AuthenticatedTimeshe
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Pageable;
+import com.nexra.hrms.nexra.common.api.PageResponse;
 
 /**
  * Defines tenant-scoped timesheet business operations for projects, entries, approvals, and summaries.
@@ -27,6 +29,16 @@ public interface TimesheetService {
         LocalDate fromDate,
         LocalDate toDate,
         AuthenticatedTimesheetUser actor
+    );
+
+    /** Paginated timesheet entries listing. */
+    PageResponse<TimesheetEntryView> listEntries(
+        String tenantCode,
+        String employeeId,
+        LocalDate fromDate,
+        LocalDate toDate,
+        AuthenticatedTimesheetUser actor,
+        Pageable pageable
     );
 
     TimesheetEntryView getEntry(String tenantCode, String entryId, AuthenticatedTimesheetUser actor);

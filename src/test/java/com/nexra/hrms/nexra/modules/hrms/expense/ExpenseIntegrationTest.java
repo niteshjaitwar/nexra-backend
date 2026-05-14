@@ -104,7 +104,7 @@ class ExpenseIntegrationTest {
                 .param("tenantCode", "ACME")
                 .param("status", "REIMBURSED"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[0].claimId").value(claimId));
+            .andExpect(jsonPath("$.data.items[0].claimId").value(claimId));
     }
 
     @Test

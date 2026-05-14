@@ -10,6 +10,8 @@ import com.nexra.hrms.nexra.modules.hrms.recruitment.model.RecruitmentSummaryVie
 import com.nexra.hrms.nexra.modules.hrms.recruitment.security.AuthenticatedRecruitmentUser;
 
 import java.util.List;
+import org.springframework.data.domain.Pageable;
+import com.nexra.hrms.nexra.common.api.PageResponse;
 
 /**
  * Service contract for tenant-scoped job and candidate recruitment workflows.
@@ -36,6 +38,9 @@ public interface IRecruitmentService {
      * @return filtered list of job views
      */
     List<JobView> listJobs(String tenantCode, String status, AuthenticatedRecruitmentUser actor);
+
+    /** Paginated job listing. */
+    PageResponse<JobView> listJobs(String tenantCode, String status, AuthenticatedRecruitmentUser actor, Pageable pageable);
 
     /**
      * Registers a new candidate for a job.
@@ -66,6 +71,9 @@ public interface IRecruitmentService {
      * @return filtered list of candidate views
      */
     List<CandidateView> listCandidates(String tenantCode, String jobId, String stage, AuthenticatedRecruitmentUser actor);
+
+    /** Paginated candidate listing. */
+    PageResponse<CandidateView> listCandidates(String tenantCode, String jobId, String stage, AuthenticatedRecruitmentUser actor, Pageable pageable);
 
     /**
      * Returns the stage change history for a candidate.

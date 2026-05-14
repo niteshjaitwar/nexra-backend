@@ -7,8 +7,10 @@ import com.nexra.hrms.nexra.modules.hrms.employee.model.Department;
 import com.nexra.hrms.nexra.modules.hrms.employee.model.Employee;
 import com.nexra.hrms.nexra.modules.hrms.employee.model.OrganizationProfile;
 import com.nexra.hrms.nexra.modules.hrms.employee.security.AuthenticatedEmployeeCoreUser;
+import com.nexra.hrms.nexra.common.api.PageResponse;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Defines tenant-scoped core HR employee master operations.
@@ -30,9 +32,15 @@ public interface EmployeeCoreService {
 
     Employee upsertEmployee(EmployeeUpsertRequest request, AuthenticatedEmployeeCoreUser actor);
 
+    /** @deprecated Use paginated overload instead. */
+    @Deprecated(forRemoval = true)
     List<Employee> listEmployees(String tenantCode, String departmentId, boolean includeInactive, AuthenticatedEmployeeCoreUser actor);
+
+    /** Paginated employee listing with optional department filter. */
+    PageResponse<Employee> listEmployees(String tenantCode, String departmentId, boolean includeInactive, AuthenticatedEmployeeCoreUser actor, Pageable pageable);
 
     Employee getEmployee(String tenantCode, String employeeId, AuthenticatedEmployeeCoreUser actor);
 
     Map<String, Object> summary(String tenantCode, AuthenticatedEmployeeCoreUser actor);
 }
+

@@ -7,6 +7,8 @@ import com.nexra.hrms.nexra.modules.hrms.expense.model.ExpenseCategoryView;
 import com.nexra.hrms.nexra.modules.hrms.expense.model.ExpenseClaimView;
 import com.nexra.hrms.nexra.modules.hrms.expense.security.AuthenticatedExpenseUser;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
+import com.nexra.hrms.nexra.common.api.PageResponse;
 
 /**
  * Defines tenant-scoped expense management operations for categories, claims, approvals, and reimbursements.
@@ -20,6 +22,9 @@ public interface ExpenseService {
     ExpenseClaimView createClaim(ExpenseClaimCreateRequest request, AuthenticatedExpenseUser actor);
 
     List<ExpenseClaimView> listClaims(String tenantCode, String employeeId, String status, AuthenticatedExpenseUser actor);
+
+    /** Paginated expense claims listing. */
+    PageResponse<ExpenseClaimView> listClaims(String tenantCode, String employeeId, String status, AuthenticatedExpenseUser actor, Pageable pageable);
 
     ExpenseClaimView getClaim(String tenantCode, String claimId, AuthenticatedExpenseUser actor);
 

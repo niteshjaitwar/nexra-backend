@@ -120,7 +120,7 @@ class LeaveManagementIntegrationTest {
                 .param("employeeId", userId.toString())
                 .param("status", "APPROVED"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[0].requestId").value(requestId));
+            .andExpect(jsonPath("$.data.items[0].requestId").value(requestId));
     }
 
     @Test

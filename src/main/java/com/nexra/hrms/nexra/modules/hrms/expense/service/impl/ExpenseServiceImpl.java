@@ -196,6 +196,36 @@ public class ExpenseServiceImpl implements ExpenseService {
             .toList();
     }
 
+    @Override
+    public com.nexra.hrms.nexra.common.api.PageResponse<ExpenseClaimView> listClaims(
+        final String tenantCode,
+        final String employeeId,
+        final String status,
+        final AuthenticatedExpenseUser actor,
+        final org.springframework.data.domain.Pageable pageable
+    ) {
+        verifyTenant(actor, tenantCode);
+        String tenant = normTenant(tenantCode);
+        String employeeFilter = blankToNull(employeeId);
+        if (employeeFilter != null) {
+            ensureSelfOrAdmin(actor, employeeFilter);
+        }
+        String statusFilter = blankToNullUpper(status);
+        org.springframework.data.domain.Page<ExpenseClaimEntity> page;
+        if (employeeFilter == null && statusFilter == null) {
+            page = claimRepository.findByTenantCodeIgnoreCase(tenant, pageable);
+        } else if (employeeFilter != null && statusFilter == null) {
+            page = claimRepository.findByTenantCodeIgnoreCaseAndEmployeeId(tenant, employeeFilter, pageable);
+        } else if (employeeFilter == null) {
+            page = claimRepository.findByTenantCodeIgnoreCaseAndStatusIgnoreCase(tenant, statusFilter, pageable);
+        } else {
+            page = claimRepository.findByTenantCodeIgnoreCaseAndEmployeeIdAndStatusIgnoreCase(tenant, employeeFilter, statusFilter, pageable);
+        }
+        return com.nexra.hrms.nexra.common.api.PageResponse.map(
+            com.nexra.hrms.nexra.common.api.PageResponse.from(page), this::toClaimModel
+        );
+    }
+
     /**
      * Returns a claim by id.
      *

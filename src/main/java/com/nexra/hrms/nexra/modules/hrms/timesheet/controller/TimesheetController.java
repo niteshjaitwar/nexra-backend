@@ -149,18 +149,23 @@ public class TimesheetController {
      * @return entries response
      */
     @GetMapping("/entries")
-    public ResponseEntity<ApiResponse<List<TimesheetEntryView>>> listEntries(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<TimesheetEntryView>>> listEntries(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam final String employeeId,
         @RequestParam(required = false) final LocalDate fromDate,
         @RequestParam(required = false) final LocalDate toDate,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
         log.debug("TimesheetController - listEntries - tenantCode={}, employeeId={}, fromDate={}, toDate={}",
             tenantCode, employeeId, fromDate, toDate);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("workDate").descending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Timesheet entries fetched successfully.",
-            timesheetService.listEntries(tenantCode, employeeId, fromDate, toDate, currentUser(httpRequest))
+            timesheetService.listEntries(tenantCode, employeeId, fromDate, toDate, currentUser(httpRequest), pageable)
         ));
     }
 

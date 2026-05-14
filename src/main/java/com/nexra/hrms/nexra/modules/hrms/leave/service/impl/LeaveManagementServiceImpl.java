@@ -249,6 +249,37 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
     }
 
     @Override
+    public com.nexra.hrms.nexra.common.api.PageResponse<LeaveRequestView> listLeaveRequests(
+        final String tenantCode,
+        final String employeeId,
+        final String status,
+        final AuthenticatedLeaveUser actor,
+        final org.springframework.data.domain.Pageable pageable
+    ) {
+        verifyTenant(actor, tenantCode);
+        String tenant = normTenant(tenantCode);
+        String employeeFilter = blankToNull(employeeId);
+        if (!isAdmin(actor) && employeeFilter != null && !requestingOwnEmployee(actor, employeeFilter)) {
+            throw new LeaveForbiddenException("User cannot view leave requests for another employee");
+        }
+        String statusFilter = blankToNullUpper(status);
+        org.springframework.data.domain.Page<LeaveRequestEntity> page;
+        if (employeeFilter == null && statusFilter == null) {
+            page = leaveRequestRepository.findByTenantCodeIgnoreCase(tenant, pageable);
+        } else if (employeeFilter != null && statusFilter == null) {
+            page = leaveRequestRepository.findByTenantCodeIgnoreCaseAndEmployeeId(tenant, employeeFilter, pageable);
+        } else if (employeeFilter == null) {
+            page = leaveRequestRepository.findByTenantCodeIgnoreCaseAndStatusIgnoreCase(tenant, statusFilter, pageable);
+        } else {
+            page = leaveRequestRepository.findByTenantCodeIgnoreCaseAndEmployeeIdAndStatusIgnoreCase(tenant, employeeFilter, statusFilter, pageable);
+        }
+        return com.nexra.hrms.nexra.common.api.PageResponse.map(
+            com.nexra.hrms.nexra.common.api.PageResponse.from(page),
+            this::toLeaveRequest
+        );
+    }
+
+    @Override
     public LeaveRequestView getLeaveRequest(final String tenantCode, final String requestId, final AuthenticatedLeaveUser actor) {
         verifyTenant(actor, tenantCode);
         LeaveRequestEntity entity = leaveRequestRepository.findByIdAndTenantCodeIgnoreCase(requestId, normTenant(tenantCode))

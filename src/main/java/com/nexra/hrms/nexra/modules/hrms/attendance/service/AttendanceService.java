@@ -9,6 +9,8 @@ import com.nexra.hrms.nexra.modules.hrms.attendance.security.AuthenticatedAttend
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Pageable;
+import com.nexra.hrms.nexra.common.api.PageResponse;
 
 /**
  * Defines attendance and shift management business operations with tenant-scoped access control.
@@ -29,6 +31,16 @@ public interface AttendanceService {
         LocalDate fromDate,
         LocalDate toDate,
         AuthenticatedAttendanceUser actor
+    );
+
+    /** Paginated attendance records listing. */
+    PageResponse<AttendanceRecordView> listRecords(
+        String tenantCode,
+        String employeeId,
+        LocalDate fromDate,
+        LocalDate toDate,
+        AuthenticatedAttendanceUser actor,
+        Pageable pageable
     );
 
     Map<String, Object> summary(

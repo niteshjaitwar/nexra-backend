@@ -155,18 +155,23 @@ public class AttendanceController {
      * @return record list
      */
     @GetMapping("/records")
-    public ResponseEntity<ApiResponse<List<AttendanceRecordView>>> records(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<AttendanceRecordView>>> records(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String employeeId,
         @RequestParam(required = false) final LocalDate fromDate,
         @RequestParam(required = false) final LocalDate toDate,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
         log.debug("AttendanceController - records - tenantCode={}, employeeId={}, fromDate={}, toDate={}",
             tenantCode, employeeId, fromDate, toDate);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("workDate").descending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Attendance records fetched successfully.",
-            attendanceService.listRecords(tenantCode, employeeId, fromDate, toDate, currentUser(httpRequest))
+            attendanceService.listRecords(tenantCode, employeeId, fromDate, toDate, currentUser(httpRequest), pageable)
         ));
     }
 

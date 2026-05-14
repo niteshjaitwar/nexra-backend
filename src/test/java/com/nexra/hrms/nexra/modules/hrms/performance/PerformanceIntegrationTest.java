@@ -98,7 +98,7 @@ class PerformanceIntegrationTest {
                 .param("tenantCode", "ACME")
                 .param("employeeId", "E1"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[0].goalId").value(goalId));
+            .andExpect(jsonPath("$.data.items[0].goalId").value(goalId));
 
         mockMvc.perform(get("/api/v1/performance/summary")
                 .header("Authorization", "Bearer " + token)

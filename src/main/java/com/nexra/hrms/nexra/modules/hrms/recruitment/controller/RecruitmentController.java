@@ -79,14 +79,19 @@ public class RecruitmentController {
     }
 
     @GetMapping("/jobs")
-    public ResponseEntity<ApiResponse<List<JobView>>> jobs(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<JobView>>> jobs(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String status,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("createdAt").descending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Jobs fetched successfully.",
-            recruitmentService.listJobs(tenantCode, status, currentUser(httpRequest))
+            recruitmentService.listJobs(tenantCode, status, currentUser(httpRequest), pageable)
         ));
     }
 
@@ -118,15 +123,20 @@ public class RecruitmentController {
     }
 
     @GetMapping("/candidates")
-    public ResponseEntity<ApiResponse<List<CandidateView>>> candidates(
+    public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<CandidateView>>> candidates(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String jobId,
         @RequestParam(required = false) final String stage,
+        @RequestParam(defaultValue = "0") final int page,
+        @RequestParam(defaultValue = "20") final int size,
         final HttpServletRequest httpRequest
     ) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, Math.min(size, 100), org.springframework.data.domain.Sort.by("createdAt").descending()
+        );
         return ResponseEntity.ok(ApiResponse.success(
             "Candidates fetched successfully.",
-            recruitmentService.listCandidates(tenantCode, jobId, stage, currentUser(httpRequest))
+            recruitmentService.listCandidates(tenantCode, jobId, stage, currentUser(httpRequest), pageable)
         ));
     }
 

@@ -91,8 +91,8 @@ class AttendanceIntegrationTest {
                 .param("fromDate", "2026-03-01")
                 .param("toDate", "2026-03-31"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data[0].employeeId").value(userId.toString()))
-            .andExpect(jsonPath("$.data[0].workDate").value("2026-03-10"));
+            .andExpect(jsonPath("$.data.items[0].employeeId").value(userId.toString()))
+            .andExpect(jsonPath("$.data.items[0].workDate").value("2026-03-10"));
 
         mockMvc.perform(get("/api/v1/attendance/summary")
                 .header("Authorization", "Bearer " + token)
