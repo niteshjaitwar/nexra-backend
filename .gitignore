@@ -13,6 +13,12 @@ run-dev.ps1
 *.ipr
 *.iws
 
+### Eclipse / STS ###
+.classpath
+.factorypath
+.project
+.settings/
+
 ### OS ###
 .DS_Store
 Thumbs.db

@@ -194,7 +194,7 @@
                         </path>
                     </annotationProcessorPaths>
                     <compilerArgs>
-                        <arg>-Xlint:all,-processing</arg>
+                        <arg>-Xlint:all,-processing,-serial</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>

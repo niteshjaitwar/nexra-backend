@@ -16,6 +16,7 @@ import com.nexra.hrms.nexra.modules.auth.repository.UserAccountRepository;
 import com.nexra.hrms.nexra.modules.auth.repository.UserProductAccessRepository;
 import com.nexra.hrms.nexra.modules.auth.service.TenantProvisioningService;
 import com.nexra.hrms.nexra.modules.auth.service.notification.NotificationService;
+import com.nexra.hrms.nexra.modules.auth.service.security.SecurityAuditService;
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
@@ -42,6 +43,7 @@ public class TenantProvisioningServiceImpl implements TenantProvisioningService 
     private final UserProductAccessRepository userProductAccessRepository;
     private final PasswordEncoder passwordEncoder;
     private final NotificationService notificationService;
+    private final SecurityAuditService securityAuditService;
 
     /**
      * Creates a new tenant, admin user, and product access grants in a single atomic operation.
@@ -57,6 +59,8 @@ public class TenantProvisioningServiceImpl implements TenantProvisioningService 
             request.tenantCode(), request.products());
 
         if (tenantRepository.existsByCodeIgnoreCase(request.tenantCode())) {
+            securityAuditService.record("TENANT_PROVISION", request.tenantCode(), request.adminEmail(), "FAILURE",
+                "Duplicate tenant code rejected.");
             throw new BusinessException("Tenant code already exists: " + request.tenantCode());
         }
 
@@ -81,7 +85,7 @@ public class TenantProvisioningServiceImpl implements TenantProvisioningService 
         admin.setAccountType(AccountType.ENTERPRISE);
         admin.setRoles(Set.of(UserRole.ROLE_TENANT_ADMIN));
         UserAccount savedAdmin = userAccountRepository.save(admin);
-        log.info("TenantProvisioningServiceImpl() - provision() - Admin user created, email={}", request.adminEmail());
+        log.info("TenantProvisioningServiceImpl() - provision() - Admin user created, email={}", maskEmail(request.adminEmail()));
 
         for (ProductType product : request.products()) {
             UserProductAccess access = new UserProductAccess();
@@ -91,6 +95,8 @@ public class TenantProvisioningServiceImpl implements TenantProvisioningService 
             access.setGrantedAt(Instant.now());
             userProductAccessRepository.save(access);
         }
+        securityAuditService.record("TENANT_PROVISION", savedTenant.getCode(), savedAdmin.getEmail(), "SUCCESS",
+            "Tenant provisioned with products=" + productNames(request));
         log.info("TenantProvisioningServiceImpl() - provision() - Product access granted, tenantCode={}, products={}",
             savedTenant.getCode(), request.products());
 
@@ -109,5 +115,22 @@ public class TenantProvisioningServiceImpl implements TenantProvisioningService 
 
         log.info("TenantProvisioningServiceImpl() - provision() - Provisioning complete, tenantCode={}", savedTenant.getCode());
         return response;
+    }
+
+    private Set<String> productNames(final TenantProvisionRequest request) {
+        return request.products().stream()
+            .map(ProductType::name)
+            .collect(Collectors.toSet());
+    }
+
+    private String maskEmail(final String email) {
+        if (email == null || email.isBlank()) {
+            return "-";
+        }
+        int at = email.indexOf('@');
+        if (at <= 1) {
+            return "***";
+        }
+        return email.charAt(0) + "***" + email.substring(at);
     }
 }

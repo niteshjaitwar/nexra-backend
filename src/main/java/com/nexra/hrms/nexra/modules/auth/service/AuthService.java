@@ -44,6 +44,13 @@ public interface AuthService {
     TokenPairResponse refreshToken(RefreshTokenRequest request);
 
     /**
+     * Revokes a refresh token so it can no longer be used to obtain access tokens.
+     *
+     * @param request refresh token payload
+     */
+    void logout(RefreshTokenRequest request);
+
+    /**
      * Generates and dispatches OTP for requested purpose.
      *
      * @param request OTP dispatch request

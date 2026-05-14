@@ -22,9 +22,9 @@ import java.util.UUID;
 import java.util.List;
 
 /**
- * In-memory CRM lead service used as the initial production-safe CRM baseline.
- * This implementation keeps strict validation and deterministic behavior while
- * the wider CRM persistence model is expanded in subsequent iterations.
+ * Persistent CRM lead service used as the initial CRM baseline.
+ * This implementation keeps strict validation, tenant scoping, and deterministic behavior while
+ * the wider CRM domain model is expanded in subsequent iterations.
  *
  * @author niteshjaitwar
  * @version 1.0

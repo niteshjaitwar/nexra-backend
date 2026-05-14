@@ -45,10 +45,11 @@ public class AdminProductAccessController {
     @GetMapping
     @PreAuthorize("hasAnyRole('TENANT_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<ApiResponse<List<ProductAccessResponse>>> getProductAccess(
-        @PathVariable final UUID userId
+        @PathVariable final UUID userId,
+        @AuthenticationPrincipal final JwtPrincipal principal
     ) {
         log.info("AdminProductAccessController() - getProductAccess() - List product access endpoint invoked, userId={}", userId);
-        List<ProductAccessResponse> response = productAccessService.getProductAccess(userId);
+        List<ProductAccessResponse> response = productAccessService.getProductAccess(userId, principal);
         return ResponseEntity.ok(ApiResponse.success("Product access fetched successfully.", response));
     }
 
@@ -69,8 +70,7 @@ public class AdminProductAccessController {
     ) {
         log.info("AdminProductAccessController() - grantProductAccess() - Grant access endpoint invoked, userId={}, product={}, role={}",
             userId, request.product(), request.productRole());
-        UUID grantedBy = principal != null ? principal.userId() : null;
-        ProductAccessResponse response = productAccessService.grantAccess(userId, request, grantedBy);
+        ProductAccessResponse response = productAccessService.grantAccess(userId, request, principal);
         return ResponseEntity.ok(ApiResponse.success("Product access granted successfully.", response));
     }
 
@@ -85,11 +85,12 @@ public class AdminProductAccessController {
     @PreAuthorize("hasAnyRole('TENANT_ADMIN', 'PLATFORM_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> revokeProductAccess(
         @PathVariable final UUID userId,
-        @PathVariable final ProductType product
+        @PathVariable final ProductType product,
+        @AuthenticationPrincipal final JwtPrincipal principal
     ) {
         log.info("AdminProductAccessController() - revokeProductAccess() - Revoke access endpoint invoked, userId={}, product={}",
             userId, product);
-        productAccessService.revokeAccess(userId, product);
+        productAccessService.revokeAccess(userId, product, principal);
         return ResponseEntity.ok(ApiResponse.success("Product access revoked successfully.", null));
     }
 }

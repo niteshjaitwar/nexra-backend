@@ -50,10 +50,10 @@ class OpenApiDocumentationComplianceTest {
         assertThat(paths.isObject()).isTrue();
         assertThat(paths.size()).isGreaterThan(0);
 
-        Iterator<Map.Entry<String, JsonNode>> pathIterator = paths.fields();
+        Iterator<Map.Entry<String, JsonNode>> pathIterator = paths.properties().iterator();
         while (pathIterator.hasNext()) {
             Map.Entry<String, JsonNode> pathEntry = pathIterator.next();
-            Iterator<Map.Entry<String, JsonNode>> operationIterator = pathEntry.getValue().fields();
+            Iterator<Map.Entry<String, JsonNode>> operationIterator = pathEntry.getValue().properties().iterator();
             while (operationIterator.hasNext()) {
                 Map.Entry<String, JsonNode> operationEntry = operationIterator.next();
                 JsonNode operation = operationEntry.getValue();

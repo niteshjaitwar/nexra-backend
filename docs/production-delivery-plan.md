@@ -18,12 +18,12 @@ Migrated into `nexra`:
 - `modules.hrms.onboarding`
 - `modules.hrms.performance`
 - `modules.hrms.recruitment`
+- `modules.hrms.expense`
 - `modules.payroll`
+- `modules.crm` lead API baseline with CRM domain schema for accounts, contacts, deals, activities, and tasks
 
-Still pending migration:
+Still pending implementation or expansion:
 
-- `expense`
-- `crm-leads`
 - `crm-contacts`
 - `crm-accounts`
 - `crm-deals`
@@ -186,9 +186,9 @@ Required outcomes:
 
 ### Phase 3: Complete Payroll Domain
 
-1. `expense`
+1. expense-to-payroll reimbursement integration
 2. statutory and payroll-run hardening
-3. payroll-to-employee integration verification
+3. payroll-to-employee, attendance, leave, timesheet, and expense integration verification
 
 Required outcomes:
 

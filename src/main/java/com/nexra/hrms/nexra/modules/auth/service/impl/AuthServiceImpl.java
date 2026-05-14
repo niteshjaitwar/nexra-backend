@@ -145,16 +145,23 @@ public class AuthServiceImpl implements AuthService {
      * @return token pair response
      */
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = UnauthorizedException.class)
     public TokenPairResponse refreshToken(final RefreshTokenRequest request) {
         log.info("AuthServiceImpl() - refreshToken() - Refreshing token");
         String hash = hash(request.refreshToken());
         RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(hash)
             .orElseThrow(() -> new UnauthorizedException("Refresh token is invalid."));
 
-        if (refreshToken.getRevokedAt() != null || refreshToken.getExpiresAt().isBefore(Instant.now())) {
+        if (refreshToken.getRevokedAt() != null) {
+            refreshTokenRepository.revokeAllActiveByUser(refreshToken.getUser(), Instant.now());
+            securityAuditService.record("REFRESH_TOKEN_REUSE", refreshToken.getUser().getTenant().getCode(), refreshToken.getUser().getEmail(),
+                "FAILURE", "Revoked refresh token reuse detected; active sessions revoked.");
+            throw new UnauthorizedException("Refresh token is expired or revoked.");
+        }
+
+        if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
             securityAuditService.record("REFRESH_TOKEN", refreshToken.getUser().getTenant().getCode(), refreshToken.getUser().getEmail(),
-                "FAILURE", "Refresh token expired or revoked.");
+                "FAILURE", "Refresh token expired.");
             throw new UnauthorizedException("Refresh token is expired or revoked.");
         }
 
@@ -164,6 +171,29 @@ public class AuthServiceImpl implements AuthService {
             "SUCCESS", "Refresh token rotated.");
 
         return issueTokenPair(refreshToken.getUser());
+    }
+
+    /**
+     * Revokes a refresh token for explicit logout.
+     *
+     * @param request refresh token payload
+     */
+    @Override
+    @Transactional
+    public void logout(final RefreshTokenRequest request) {
+        log.info("AuthServiceImpl() - logout() - Revoking refresh token");
+        String hash = hash(request.refreshToken());
+        RefreshToken refreshToken = refreshTokenRepository.findByTokenHash(hash)
+            .orElseThrow(() -> new UnauthorizedException("Refresh token is invalid."));
+        if (refreshToken.getRevokedAt() == null) {
+            refreshToken.setRevokedAt(Instant.now());
+            refreshTokenRepository.save(refreshToken);
+            securityAuditService.record("LOGOUT", refreshToken.getUser().getTenant().getCode(), refreshToken.getUser().getEmail(),
+                "SUCCESS", "Refresh token revoked by logout.");
+            return;
+        }
+        securityAuditService.record("LOGOUT", refreshToken.getUser().getTenant().getCode(), refreshToken.getUser().getEmail(),
+            "IGNORED", "Logout requested for an already revoked refresh token.");
     }
 
     /**

@@ -221,4 +221,50 @@ class AuthPlatformAndProductAccessIntegrationTest {
                     """))
             .andExpect(status().isForbidden());
     }
+
+    @Test
+    @DisplayName("Tenant admin JWT cannot manage product access for another tenant")
+    void shouldRejectCrossTenantProductAccessManagement() throws Exception {
+        Tenant tenantA = createTenant("ta");
+        Tenant tenantB = createTenant("tb");
+        UserAccount adminA = createUser(tenantA, "admin@" + tenantA.getCode() + ".local", UserRole.ROLE_TENANT_ADMIN);
+        UserAccount userB = createUser(tenantB, "user@" + tenantB.getCode() + ".local", UserRole.ROLE_USER);
+        String bearer = jwtService.generateAccessToken(userAccountRepository.findById(adminA.getId()).orElseThrow());
+
+        mockMvc.perform(get("/api/v1/admin/users/" + userB.getId() + "/products")
+                .header("Authorization", "Bearer " + bearer))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/admin/users/" + userB.getId() + "/products")
+                .header("Authorization", "Bearer " + bearer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"product":"HRMS","productRole":"EMPLOYEE"}
+                    """))
+            .andExpect(status().isForbidden());
+    }
+
+    private Tenant createTenant(final String prefix) {
+        Tenant tenant = new Tenant();
+        tenant.setCode(prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 8));
+        tenant.setName("Tenant " + prefix);
+        tenant.setEnterprise(true);
+        tenant.setActive(true);
+        return tenantRepository.save(tenant);
+    }
+
+    private UserAccount createUser(final Tenant tenant, final String email, final UserRole role) {
+        UserAccount user = new UserAccount();
+        user.setTenant(tenant);
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode("Password@123"));
+        user.setFirstName("Test");
+        user.setLastName("User");
+        user.setEmailVerified(true);
+        user.setMfaEnabled(false);
+        user.setAccountType(AccountType.ENTERPRISE);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setRoles(Set.of(role));
+        return userAccountRepository.save(user);
+    }
 }

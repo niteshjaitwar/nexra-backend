@@ -75,6 +75,19 @@ public class AuthController {
     }
 
     /**
+     * Revokes the presented refresh token for explicit logout.
+     *
+     * @param request refresh token payload
+     * @return standardized API response
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody final RefreshTokenRequest request) {
+        log.info("AuthController() - logout() - Logout endpoint invoked");
+        authService.logout(request);
+        return ResponseEntity.ok(ApiResponse.success("Logout successful.", null));
+    }
+
+    /**
      * Initiates OTP delivery for account verification or passwordless login.
      *
      * @param request OTP dispatch payload

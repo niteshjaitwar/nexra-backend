@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Implements payroll generation and payslip retrieval workflows using in-memory slip storage.
+ * Implements payroll generation and payslip retrieval workflows backed by persistent payroll slip storage.
  *
  * @author niteshjaitwar
  * @version 1.0

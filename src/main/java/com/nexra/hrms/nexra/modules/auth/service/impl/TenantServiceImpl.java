@@ -7,6 +7,7 @@ import com.nexra.hrms.nexra.modules.auth.exception.BusinessException;
 import com.nexra.hrms.nexra.modules.auth.exception.ResourceNotFoundException;
 import com.nexra.hrms.nexra.modules.auth.repository.TenantRepository;
 import com.nexra.hrms.nexra.modules.auth.service.TenantService;
+import com.nexra.hrms.nexra.modules.auth.service.security.SecurityAuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TenantServiceImpl implements TenantService {
 
     private final TenantRepository tenantRepository;
+    private final SecurityAuditService securityAuditService;
     private final ModelMapper modelMapper;
 
     /**
@@ -38,6 +40,7 @@ public class TenantServiceImpl implements TenantService {
     public TenantResponse createTenant(final TenantCreateRequest request) {
         log.info("TenantServiceImpl() - createTenant() - Creating tenant, code={}", request.code());
         if (tenantRepository.existsByCodeIgnoreCase(request.code())) {
+            securityAuditService.record("TENANT_CREATE", request.code(), null, "FAILURE", "Duplicate tenant code rejected.");
             throw new BusinessException("Tenant code already exists.");
         }
 
@@ -46,6 +49,7 @@ public class TenantServiceImpl implements TenantService {
         tenant.setActive(true);
 
         Tenant saved = tenantRepository.save(tenant);
+        securityAuditService.record("TENANT_CREATE", saved.getCode(), null, "SUCCESS", "Tenant created.");
         log.info("TenantServiceImpl() - createTenant() - Tenant created successfully, code={}", saved.getCode());
         return modelMapper.map(saved, TenantResponse.class);
     }

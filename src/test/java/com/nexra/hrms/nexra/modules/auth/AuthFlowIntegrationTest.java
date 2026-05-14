@@ -273,4 +273,133 @@ class AuthFlowIntegrationTest {
                 .header("Authorization", "Bearer " + accessToken))
             .andExpect(status().isForbidden());
     }
+
+    @Test
+    void shouldRevokeRefreshTokenOnLogout() throws Exception {
+        String tenantCode = "logout" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        String email = "user@" + tenantCode + ".local";
+        String refreshToken = createVerifiedUserAndLogin(tenantCode, email);
+
+        String logoutPayload = """
+            {
+              "refreshToken":"%s"
+            }
+            """.formatted(refreshToken);
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(logoutPayload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(logoutPayload))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void shouldRevokeActiveSessionsWhenRevokedRefreshTokenIsReused() throws Exception {
+        String tenantCode = "reuse" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        String email = "user@" + tenantCode + ".local";
+        String originalRefreshToken = createVerifiedUserAndLogin(tenantCode, email);
+
+        MvcResult refreshResult = mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "refreshToken":"%s"
+                    }
+                    """.formatted(originalRefreshToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andReturn();
+
+        String rotatedRefreshToken = JsonPath.read(refreshResult.getResponse().getContentAsString(), "$.data.refreshToken");
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "refreshToken":"%s"
+                    }
+                    """.formatted(originalRefreshToken)))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "refreshToken":"%s"
+                    }
+                    """.formatted(rotatedRefreshToken)))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.success").value(false));
+    }
+
+    private String createVerifiedUserAndLogin(final String tenantCode, final String email) throws Exception {
+        mockMvc.perform(post("/api/v1/tenants")
+                .with(user("platform-admin").roles("PLATFORM_ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"code":"%s","name":"Token Tenant","enterprise":true}
+                    """.formatted(tenantCode)))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"%s",
+                      "email":"%s",
+                      "password":"Password@123",
+                      "firstName":"Token",
+                      "lastName":"User",
+                      "accountType":"ENTERPRISE"
+                    }
+                    """.formatted(tenantCode, email)))
+            .andExpect(status().isOk());
+
+        MvcResult otpRequestResult = mockMvc.perform(post("/api/v1/auth/verification/otp/request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"%s",
+                      "email":"%s",
+                      "purpose":"ACCOUNT_VERIFICATION"
+                    }
+                    """.formatted(tenantCode, email)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String otp = JsonPath.read(otpRequestResult.getResponse().getContentAsString(), "$.data.rawTokenForDevOnly");
+
+        mockMvc.perform(post("/api/v1/auth/verification/otp/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"%s",
+                      "email":"%s",
+                      "purpose":"ACCOUNT_VERIFICATION",
+                      "otp":"%s"
+                    }
+                    """.formatted(tenantCode, email, otp)))
+            .andExpect(status().isOk());
+
+        MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"%s",
+                      "email":"%s",
+                      "password":"Password@123"
+                    }
+                    """.formatted(tenantCode, email)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        return JsonPath.read(loginResult.getResponse().getContentAsString(), "$.data.refreshToken");
+    }
 }
