@@ -78,7 +78,42 @@ class CrmLeadIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.company").value("Acme Enterprise"));
 
+        mockMvc.perform(post("/api/v1/crm/leads/{leadId}/convert", leadId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.leadId").value(leadId))
+            .andExpect(jsonPath("$.data.accountId").isNotEmpty())
+            .andExpect(jsonPath("$.data.contactId").isNotEmpty())
+            .andExpect(jsonPath("$.data.dealId").isNotEmpty());
+
         mockMvc.perform(delete("/api/v1/crm/leads/{leadId}", leadId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.success").value(false));
+
+        final String createForDeleteResponse = mockMvc.perform(post("/api/v1/crm/leads")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "fullName":"Delete Candidate",
+                      "email":"delete.candidate@acme.test",
+                      "phone":"+91-9444444444",
+                      "company":"Acme Corp",
+                      "source":"Website",
+                      "ownerUserId":"u-1001",
+                      "notes":"To be deleted"
+                    }
+                    """))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        final String deletableLeadId = readLeadId(createForDeleteResponse);
+
+        mockMvc.perform(delete("/api/v1/crm/leads/{leadId}", deletableLeadId)
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true));

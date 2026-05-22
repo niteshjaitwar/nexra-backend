@@ -1,9 +1,11 @@
 package com.nexra.hrms.nexra.modules.crm.service;
 
 import com.nexra.hrms.nexra.common.api.PageResponse;
+import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadConvertRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadCreateRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLead;
+import com.nexra.hrms.nexra.modules.crm.model.CrmLeadConversionResult;
 
 /**
  * Business contract for managing CRM leads.
@@ -46,6 +48,16 @@ public interface CrmLeadService {
      * @return paged lead collection.
      */
     PageResponse<CrmLead> list(String tenantCode, int page, int size);
+
+    /**
+     * Converts a lead into account, contact, and deal records.
+     *
+     * @param tenantCode tenant scope.
+     * @param leadId lead to convert.
+     * @param request conversion payload.
+     * @return identifiers for converted CRM records.
+     */
+    CrmLeadConversionResult convertLead(String tenantCode, String leadId, CrmLeadConvertRequest request);
 
     /**
      * Deletes a CRM lead by id.

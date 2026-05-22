@@ -6,9 +6,11 @@ import com.nexra.hrms.nexra.common.exception.NexraForbiddenException;
 import com.nexra.hrms.nexra.common.exception.NexraUnauthorizedException;
 import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
+import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadConvertRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadCreateRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLead;
+import com.nexra.hrms.nexra.modules.crm.model.CrmLeadConversionResult;
 import com.nexra.hrms.nexra.modules.crm.service.CrmLeadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -117,6 +119,22 @@ public class CrmLeadController {
         @Valid @RequestBody final CrmLeadUpdateRequest request
     ) {
         return ResponseEntity.ok(ApiResponse.ok(service.update(resolveTenantCode(), leadId, request), "CRM lead updated successfully."));
+    }
+
+    @Operation(summary = "Convert CRM lead", description = "Converts lead into account, contact, and deal records.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Lead converted."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Lead not found."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "Lead already converted.")
+    })
+    @PostMapping("/{leadId}/convert")
+    public ResponseEntity<ApiResponse<CrmLeadConversionResult>> convert(
+        @PathVariable final String leadId,
+        @Valid @RequestBody final CrmLeadConvertRequest request
+    ) {
+        return ResponseEntity.ok(
+            ApiResponse.ok(service.convertLead(resolveTenantCode(), leadId, request), "CRM lead converted successfully.")
+        );
     }
 
     /**

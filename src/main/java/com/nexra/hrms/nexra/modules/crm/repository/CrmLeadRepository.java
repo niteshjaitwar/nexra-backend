@@ -12,7 +12,7 @@ public interface CrmLeadRepository extends JpaRepository<CrmLeadEntity, String> 
 
     Optional<CrmLeadEntity> findByIdAndTenantCodeIgnoreCase(String id, String tenantCode);
 
-    Page<CrmLeadEntity> findAllByTenantCodeIgnoreCase(String tenantCode, Pageable pageable);
+    Page<CrmLeadEntity> findAllByTenantCodeIgnoreCaseOrderByDomainUpdatedAtDescIdDesc(String tenantCode, Pageable pageable);
 
     boolean existsByTenantCodeIgnoreCaseAndEmailIgnoreCase(String tenantCode, String email);
 
