@@ -37,6 +37,9 @@ public class ProductionReadinessValidator implements ApplicationRunner {
             "AUTH_OAUTH2_ISSUER must be configured in prod.");
         assertCondition(!isBlank(authProperties.getOauth2().getDefaultClientSecret()),
             "AUTH_OAUTH2_DEFAULT_CLIENT_SECRET must be configured in prod.");
+        assertCondition(authProperties.getOauth2().getDefaultClientSecret().length() >= 16
+                && !isUnsafeDefault(authProperties.getOauth2().getDefaultClientSecret()),
+            "AUTH_OAUTH2_DEFAULT_CLIENT_SECRET must be strong and must not use an unsafe default.");
         assertCondition(!isBlank(authProperties.getOauth2().getKeystoreLocation()),
             "AUTH_OAUTH2_KEYSTORE_LOCATION must be configured in prod.");
         assertCondition(!isBlank(authProperties.getOauth2().getKeystorePassword()),
@@ -52,6 +55,12 @@ public class ProductionReadinessValidator implements ApplicationRunner {
             "app.auth.security.cors-allowed-origins must not include localhost/127.0.0.1 in prod.");
         assertCondition(Boolean.parseBoolean(environment.getProperty("nexra.common.rate-limit.distributed-enabled", "false")),
             "nexra.common.rate-limit.distributed-enabled must be true in prod.");
+        assertCondition(authProperties.getSecurity().isRedisEnabled(),
+            "app.auth.security.redis-enabled must be true in prod.");
+        assertCondition(!isBlank(environment.getProperty("spring.data.redis.host")),
+            "AUTH_REDIS_HOST must be configured in prod.");
+        assertCondition(!isBlank(environment.getProperty("spring.data.redis.port")),
+            "AUTH_REDIS_PORT must be configured in prod.");
         if (authProperties.getMail().isEnabled()) {
             assertCondition(!isBlank(authProperties.getMail().getFrom()),
                 "AUTH_MAIL_FROM must be configured when mail is enabled in prod.");
@@ -86,5 +95,12 @@ public class ProductionReadinessValidator implements ApplicationRunner {
         }
         final String normalized = origin.trim().toLowerCase();
         return normalized.contains("localhost") || normalized.contains("127.0.0.1");
+    }
+
+    private boolean isUnsafeDefault(final String value) {
+        final String normalized = value.trim().toLowerCase();
+        return normalized.contains("change-me")
+            || normalized.contains("changeme")
+            || normalized.contains("default");
     }
 }

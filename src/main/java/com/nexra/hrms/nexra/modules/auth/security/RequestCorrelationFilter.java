@@ -22,6 +22,24 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
 
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String MDC_KEY = "requestId";
+    private static final String[] MODULE_PATH_PREFIXES = {
+        "/api/v1/auth/",
+        "/api/v1/tenants",
+        "/api/v1/platform/",
+        "/api/v1/admin/",
+        "/api/v1/oauth-clients"
+    };
+
+    @Override
+    protected boolean shouldNotFilter(final HttpServletRequest request) {
+        final String uri = request.getRequestURI();
+        for (String prefix : MODULE_PATH_PREFIXES) {
+            if (uri.startsWith(prefix)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -29,13 +47,19 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
         final HttpServletResponse response,
         final FilterChain filterChain
     ) throws ServletException, IOException {
-        String requestId = resolveRequestId(request);
-        MDC.put(MDC_KEY, requestId);
+        final String existing = MDC.get(MDC_KEY);
+        final boolean alreadySet = StringUtils.hasText(existing);
+        final String requestId = alreadySet ? existing : resolveRequestId(request);
+        if (!alreadySet) {
+            MDC.put(MDC_KEY, requestId);
+        }
         response.setHeader(REQUEST_ID_HEADER, requestId);
         try {
             filterChain.doFilter(request, response);
         } finally {
-            MDC.remove(MDC_KEY);
+            if (!alreadySet) {
+                MDC.remove(MDC_KEY);
+            }
         }
     }
 

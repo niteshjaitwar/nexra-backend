@@ -115,6 +115,55 @@ class AttendanceIntegrationTest {
             .andExpect(jsonPath("$.success").value(false));
     }
 
+    @Test
+    void rejectsMalformedJsonPayloads() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String token = bearerToken(userId, "ACME", List.of("ROLE_HR_ADMIN"));
+
+        mockMvc.perform(post("/api/v1/attendance/check-in")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"tenantCode":"ACME","employeeId":"%s","workDate":"2026-03-10","shiftCode":"GEN"
+                    """.formatted(userId)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("MALFORMED_JSON"))
+            .andExpect(jsonPath("$.message").value("Invalid request payload."));
+    }
+
+    @Test
+    void rejectsCrossEmployeeAccessForNonAdmin() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID otherEmployeeId = UUID.randomUUID();
+        String token = bearerToken(userId, "ACME", List.of("ROLE_EMPLOYEE"));
+
+        mockMvc.perform(get("/api/v1/attendance/records")
+                .header("Authorization", "Bearer " + token)
+                .param("tenantCode", "ACME")
+                .param("employeeId", otherEmployeeId.toString())
+                .param("fromDate", "2026-03-01")
+                .param("toDate", "2026-03-31"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("User cannot access attendance for another employee"));
+    }
+
+    @Test
+    void rejectsInvalidDateRangeForAttendanceQueries() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String token = bearerToken(userId, "ACME", List.of("ROLE_HR_ADMIN"));
+
+        mockMvc.perform(get("/api/v1/attendance/summary")
+                .header("Authorization", "Bearer " + token)
+                .param("tenantCode", "ACME")
+                .param("employeeId", userId.toString())
+                .param("fromDate", "2026-03-31")
+                .param("toDate", "2026-03-01"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("toDate must be on or after fromDate"));
+    }
+
     private String bearerToken(final UUID userId, final String tenantCode, final List<String> roles) {
         SecretKey key = Keys.hmacShaKeyFor("01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()

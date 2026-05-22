@@ -8,10 +8,11 @@ import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLeadStatus;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmLeadRepository;
-import jakarta.validation.constraints.Email;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -22,15 +23,14 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Validated
 @RequiredArgsConstructor
-@RequestMapping("/api/crm")
+@RequestMapping("/api/v1/crm")
+@Tag(name = "CRM Product", description = "CRM pipeline and product-level summary endpoints.")
 public class CrmProductController {
 
     private static final Set<String> SUPPORTED_MODULE_KEYS = Set.of(
@@ -46,6 +46,13 @@ public class CrmProductController {
     private final CrmProperties crmProperties;
 
     @GetMapping("/modules/{moduleKey}/pipeline")
+    @Operation(summary = "Get CRM pipeline snapshot", description = "Returns tenant-scoped CRM pipeline summary for a supported CRM module.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Pipeline snapshot fetched successfully."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid module key."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access is missing.")
+    })
     public ResponseEntity<ApiResponse<Map<String, Object>>> pipelineSnapshot(
         @PathVariable @NotBlank @Size(max = 80) final String moduleKey
     ) {
@@ -62,19 +69,6 @@ public class CrmProductController {
             "openPipelineValue", openPipelineValue,
             "wonCount", wonCount
         ), "CRM pipeline snapshot fetched successfully."));
-    }
-
-    @PostMapping("/records/mutate")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> mutateRecord(@RequestBody final CrmRecordMutationRequest request) {
-        final String tenantCode = resolveTenantCode();
-        validateModuleKey(request.moduleKey());
-        return ResponseEntity.ok(ApiResponse.ok(Map.of(
-            "accepted", true,
-            "tenantCode", tenantCode,
-            "moduleKey", request.moduleKey(),
-            "receivedAt", Instant.now().toString(),
-            "mutationRef", "crm-" + System.nanoTime()
-        ), "CRM mutation accepted successfully."));
     }
 
     private String resolveTenantCode() {
@@ -104,12 +98,5 @@ public class CrmProductController {
             return;
         }
         throw new NexraValidationException("Unsupported CRM module key: " + moduleKey);
-    }
-
-    public record CrmRecordMutationRequest(
-        @NotBlank @Size(max = 80) String moduleKey,
-        @Email @Size(max = 160) String ownerEmail,
-        Map<String, Object> payload
-    ) {
     }
 }

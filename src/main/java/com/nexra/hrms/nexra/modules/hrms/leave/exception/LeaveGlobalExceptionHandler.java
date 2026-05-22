@@ -1,9 +1,8 @@
 package com.nexra.hrms.nexra.modules.hrms.leave.exception;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
+import com.nexra.hrms.nexra.common.exception.ApiErrorResponseFactory;
 import jakarta.validation.ConstraintViolationException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -28,42 +27,43 @@ public class LeaveGlobalExceptionHandler {
     @ExceptionHandler(LeaveBusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusiness(final LeaveBusinessException ex) {
         log.warn("Leave LeaveGlobalExceptionHandler - business error: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.failure(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(ApiErrorResponseFactory.failure("BUSINESS_RULE_VIOLATION", ex.getMessage()));
     }
 
     @ExceptionHandler(LeaveResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(final LeaveResourceNotFoundException ex) {
         log.warn("Leave LeaveGlobalExceptionHandler - resource not found: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.failure(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(ApiErrorResponseFactory.failure("NOT_FOUND", ex.getMessage()));
     }
 
     @ExceptionHandler(LeaveForbiddenException.class)
     public ResponseEntity<ApiResponse<Void>> handleForbidden(final LeaveForbiddenException ex) {
         log.warn("Leave LeaveGlobalExceptionHandler - forbidden: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.failure(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(ApiErrorResponseFactory.failure("FORBIDDEN", ex.getMessage()));
     }
 
     @ExceptionHandler(LeaveUnauthorizedException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnauthorized(final LeaveUnauthorizedException ex) {
         log.warn("Leave LeaveGlobalExceptionHandler - unauthorized: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.failure(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ApiErrorResponseFactory.failure("UNAUTHORIZED", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(final MethodArgumentNotValidException ex) {
-        Map<String, String> fieldErrors = new LinkedHashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(err -> fieldErrors.put(err.getField(), err.getDefaultMessage()));
-        log.warn("Leave LeaveGlobalExceptionHandler - validation failed: {}", fieldErrors);
+        log.warn("Leave LeaveGlobalExceptionHandler - validation failed: {}", ex.getMessage());
         return ResponseEntity.badRequest()
-            .body(ApiResponse.failure("VALIDATION_FAILED", "Validation failed.").withMeta("errors", fieldErrors));
+            .body(ApiErrorResponseFactory.validation(ex, "Validation failed."));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(final ConstraintViolationException ex) {
         log.warn("Leave LeaveGlobalExceptionHandler - constraint violation: {}", ex.getMessage());
         return ResponseEntity.badRequest()
-            .body(ApiResponse.failure("VALIDATION_FAILED", "Validation failed.")
-                .withMeta("details", ex.getMessage()));
+            .body(ApiErrorResponseFactory.validation(ex, "Validation failed."));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -75,12 +75,14 @@ public class LeaveGlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(final IllegalArgumentException ex) {
         log.warn("Leave LeaveGlobalExceptionHandler - illegal argument: {}", ex.getMessage());
-        return ResponseEntity.badRequest().body(ApiResponse.failure(ex.getMessage()));
+        return ResponseEntity.badRequest()
+            .body(ApiErrorResponseFactory.failure("VALIDATION_FAILED", ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnhandled(final Exception ex) {
         log.error("Leave LeaveGlobalExceptionHandler - unhandled exception", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.failure("Internal server error."));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ApiErrorResponseFactory.failure("INTERNAL_ERROR", "Internal server error."));
     }
 }

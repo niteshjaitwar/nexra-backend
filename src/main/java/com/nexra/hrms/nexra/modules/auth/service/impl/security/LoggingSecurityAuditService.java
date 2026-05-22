@@ -1,7 +1,11 @@
 package com.nexra.hrms.nexra.modules.auth.service.impl.security;
 
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.auth.service.security.SecurityAuditService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 /**
@@ -12,7 +16,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class LoggingSecurityAuditService implements SecurityAuditService {
+
+    private final AuditEventService auditEventService;
 
     @Override
     public void record(
@@ -29,6 +36,12 @@ public class LoggingSecurityAuditService implements SecurityAuditService {
             maskEmail(email),
             outcome,
             details
+        );
+        auditEventService.record(
+            AuditEventRecord.of(tenantCode, "AUTH", eventType, outcome)
+                .withActor(email, null)
+                .withDetail(details)
+                .withRequestInfo(null, MDC.get("requestId"))
         );
     }
 

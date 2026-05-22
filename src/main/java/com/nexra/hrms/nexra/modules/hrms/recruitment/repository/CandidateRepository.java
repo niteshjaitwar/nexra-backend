@@ -12,6 +12,8 @@ public interface CandidateRepository extends JpaRepository<CandidateEntity, Stri
     List<CandidateEntity> findByTenantCodeOrderByCreatedAtDesc(String tenantCode);
     long countByTenantCode(String tenantCode);
     long countByTenantCodeAndStage(String tenantCode, String stage);
+    boolean existsByTenantCodeAndEmailIgnoreCase(String tenantCode, String email);
+    boolean existsByTenantCodeAndPhone(String tenantCode, String phone);
 
     // Paginated queries
     Page<CandidateEntity> findByTenantCode(String tenantCode, Pageable pageable);

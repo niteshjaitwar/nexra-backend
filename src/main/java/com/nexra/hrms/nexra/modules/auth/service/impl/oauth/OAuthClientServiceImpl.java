@@ -4,6 +4,7 @@ import com.nexra.hrms.nexra.modules.auth.dto.request.OAuthClientCreateRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.response.OAuthClientResponse;
 import com.nexra.hrms.nexra.modules.auth.exception.BusinessException;
 import com.nexra.hrms.nexra.modules.auth.service.oauth.OAuthClientService;
+import com.nexra.hrms.nexra.modules.auth.service.security.SecurityAuditService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -37,6 +38,7 @@ public class OAuthClientServiceImpl implements OAuthClientService {
     private final RegisteredClientRepository registeredClientRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
+    private final SecurityAuditService securityAuditService;
    // private final ModelMapper modelMapper;
 
     /**
@@ -50,6 +52,8 @@ public class OAuthClientServiceImpl implements OAuthClientService {
     public OAuthClientResponse registerClient(final OAuthClientCreateRequest request) {
         log.info("OAuthClientServiceImpl() - registerClient() - Registering OAuth client, clientId={}", request.clientId());
         if (registeredClientRepository.findByClientId(request.clientId()) != null) {
+            securityAuditService.record("OAUTH_CLIENT_CREATE", "PLATFORM", request.clientId(), "FAILURE",
+                "Duplicate OAuth client id rejected.");
             throw new BusinessException("OAuth client id already exists.");
         }
 
@@ -70,6 +74,8 @@ public class OAuthClientServiceImpl implements OAuthClientService {
             .build();
 
         registeredClientRepository.save(client);
+        securityAuditService.record("OAUTH_CLIENT_CREATE", "PLATFORM", request.clientId(), "SUCCESS",
+            "OAuth client registered.");
         return toResponse(client);
     }
 

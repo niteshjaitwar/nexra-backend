@@ -27,6 +27,7 @@
         <bucket4j.version>8.17.0</bucket4j.version>
         <jacoco.minimum.line.coverage>0.60</jacoco.minimum.line.coverage>
         <jacocoArgLine></jacocoArgLine>
+        <maven.compiler.proc>full</maven.compiler.proc>
     </properties>
 
     <dependencies>

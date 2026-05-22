@@ -231,8 +231,9 @@ class AuthSecurityNegativeIntegrationTest {
             mockMvc.perform(post("/api/v1/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(loginPayload))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid credentials."));
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Invalid credentials."))
+            .andExpect(jsonPath("$.meta.requestId").exists());
         }
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -315,7 +316,9 @@ class AuthSecurityNegativeIntegrationTest {
         mockMvc.perform(get("/api/v1/oauth-clients"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.message").value("Authentication is required."));
+            .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.message").value("Authentication is required."))
+            .andExpect(jsonPath("$.meta.requestId").exists());
     }
 
     @Test
@@ -373,5 +376,36 @@ class AuthSecurityNegativeIntegrationTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message", containsString("Password must contain upper, lower, digit, and special characters.")))
             .andExpect(jsonPath("$.message", containsString("size must be between 12 and 160")));
+    }
+
+    @Test
+    void shouldRejectMalformedJsonPayloads() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"tenantCode":"nexra","email":"user@nexra.local","password":"Password@123"
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("MALFORMED_JSON"))
+            .andExpect(jsonPath("$.message").value("Invalid request payload."));
+    }
+
+    @Test
+    void shouldRejectBlankRefreshTokenForRefreshAndLogout() throws Exception {
+        String blankTokenPayload = """
+            {"refreshToken":"   "}
+            """;
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(blankTokenPayload))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(blankTokenPayload))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
 }

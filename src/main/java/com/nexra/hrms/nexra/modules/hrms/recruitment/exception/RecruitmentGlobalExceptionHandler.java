@@ -1,12 +1,14 @@
 package com.nexra.hrms.nexra.modules.hrms.recruitment.exception;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
+import com.nexra.hrms.nexra.common.exception.ApiErrorResponseFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -27,7 +29,7 @@ public class RecruitmentGlobalExceptionHandler {
         final RecruitmentUnauthorizedException exception,
         final HttpServletRequest request
     ) {
-        return build(HttpStatus.UNAUTHORIZED, exception.getMessage());
+        return build(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", exception.getMessage());
     }
 
     @ExceptionHandler(RecruitmentForbiddenException.class)
@@ -35,7 +37,7 @@ public class RecruitmentGlobalExceptionHandler {
         final RecruitmentForbiddenException exception,
         final HttpServletRequest request
     ) {
-        return build(HttpStatus.FORBIDDEN, exception.getMessage());
+        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", exception.getMessage());
     }
 
     @ExceptionHandler(RecruitmentResourceNotFoundException.class)
@@ -43,7 +45,7 @@ public class RecruitmentGlobalExceptionHandler {
         final RecruitmentResourceNotFoundException exception,
         final HttpServletRequest request
     ) {
-        return build(HttpStatus.NOT_FOUND, exception.getMessage());
+        return build(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage());
     }
 
     @ExceptionHandler(RecruitmentBusinessException.class)
@@ -51,7 +53,7 @@ public class RecruitmentGlobalExceptionHandler {
         final RecruitmentBusinessException exception,
         final HttpServletRequest request
     ) {
-        return build(HttpStatus.CONFLICT, exception.getMessage());
+        return build(HttpStatus.CONFLICT, "BUSINESS_RULE_VIOLATION", exception.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -59,11 +61,20 @@ public class RecruitmentGlobalExceptionHandler {
         final MethodArgumentNotValidException exception,
         final HttpServletRequest request
     ) {
-        String message = exception.getBindingResult().getFieldErrors().stream()
+        final String message = exception.getBindingResult().getFieldErrors().stream()
             .findFirst()
             .map(error -> error.getField() + " " + error.getDefaultMessage())
             .orElse("Validation failed.");
-        return build(HttpStatus.BAD_REQUEST, message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ApiErrorResponseFactory.validation(exception, message));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMalformedPayload(
+        final HttpMessageNotReadableException exception,
+        final HttpServletRequest request
+    ) {
+        return build(HttpStatus.BAD_REQUEST, "MALFORMED_JSON", "Invalid request payload.");
     }
 
     @ExceptionHandler(Exception.class)
@@ -72,10 +83,14 @@ public class RecruitmentGlobalExceptionHandler {
         final HttpServletRequest request
     ) {
         log.error("Unhandled recruitment module exception", exception);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error.");
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Unexpected server error.");
     }
 
-    private ResponseEntity<ApiResponse<Void>> build(final HttpStatus status, final String message) {
-        return ResponseEntity.status(status).body(ApiResponse.failure(message));
+    private ResponseEntity<ApiResponse<Void>> build(
+        final HttpStatus status,
+        final String code,
+        final String message
+    ) {
+        return ResponseEntity.status(status).body(ApiErrorResponseFactory.failure(code, message));
     }
 }

@@ -12,6 +12,9 @@ import com.nexra.hrms.nexra.modules.payroll.repository.PayrollSlipRepository;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
@@ -32,7 +35,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Validated
 @RequiredArgsConstructor
-@RequestMapping("/api/hrms")
+@RequestMapping("/api/v1/hrms")
+@Tag(name = "HRMS Product", description = "HRMS product workflow and module-level summary endpoints.")
 public class HrmsProductController {
 
     private static final Set<String> SUPPORTED_MODULE_KEYS = Set.of(
@@ -51,6 +55,12 @@ public class HrmsProductController {
     private final PayrollSlipRepository payrollSlipRepository;
 
     @GetMapping("/modules/{moduleKey}/summary")
+    @Operation(summary = "Get HRMS module summary", description = "Returns tenant-scoped operational summary for a supported HRMS module.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Module summary fetched successfully."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid module key."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required.")
+    })
     public ResponseEntity<ApiResponse<Map<String, Object>>> moduleSummary(
         @PathVariable @NotBlank @Size(max = 80) final String moduleKey
     ) {
@@ -69,6 +79,12 @@ public class HrmsProductController {
     }
 
     @PostMapping("/workflow")
+    @Operation(summary = "Submit HRMS workflow", description = "Accepts tenant-scoped workflow payload for a supported HRMS module.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Workflow accepted."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid payload or unsupported module key."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required.")
+    })
     public ResponseEntity<ApiResponse<Map<String, Object>>> workflow(@RequestBody final HrmsWorkflowRequest request) {
         final String tenantCode = resolveTenantCode();
         validateModuleKey(request.moduleKey());

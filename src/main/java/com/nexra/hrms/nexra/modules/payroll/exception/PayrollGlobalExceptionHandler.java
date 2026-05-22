@@ -1,9 +1,8 @@
 package com.nexra.hrms.nexra.modules.payroll.exception;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
+import com.nexra.hrms.nexra.common.exception.ApiErrorResponseFactory;
 import jakarta.validation.ConstraintViolationException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -51,19 +50,16 @@ public class PayrollGlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(final MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new LinkedHashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error -> errors.put(error.getField(), error.getDefaultMessage()));
-        log.warn("PayrollGlobalExceptionHandler - request validation failed: {}", errors);
+        log.warn("PayrollGlobalExceptionHandler - request validation failed: {}", ex.getMessage());
         return ResponseEntity.badRequest()
-            .body(ApiResponse.failure("VALIDATION_FAILED", "Validation failed.").withMeta("errors", errors));
+            .body(ApiErrorResponseFactory.validation(ex, "Validation failed."));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(final ConstraintViolationException ex) {
         log.warn("PayrollGlobalExceptionHandler - constraint violation: {}", ex.getMessage());
         return ResponseEntity.badRequest()
-            .body(ApiResponse.failure("VALIDATION_FAILED", "Validation failed.")
-                .withMeta("errors", Map.of("error", ex.getMessage())));
+            .body(ApiErrorResponseFactory.validation(ex, "Validation failed."));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -75,13 +71,14 @@ public class PayrollGlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(final IllegalArgumentException ex) {
         log.warn("PayrollGlobalExceptionHandler - illegal argument: {}", ex.getMessage());
-        return ResponseEntity.badRequest().body(ApiResponse.failure("VALIDATION_FAILED", ex.getMessage()));
+        return ResponseEntity.badRequest()
+            .body(ApiErrorResponseFactory.failure("VALIDATION_FAILED", ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnknown(final Exception ex) {
         log.error("PayrollGlobalExceptionHandler - unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.failure("INTERNAL_ERROR", "Internal server error."));
+            .body(ApiErrorResponseFactory.failure("INTERNAL_ERROR", "Internal server error."));
     }
 }

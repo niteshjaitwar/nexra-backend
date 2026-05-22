@@ -1,10 +1,12 @@
 package com.nexra.hrms.nexra.modules.auth.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.Instant;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -17,7 +19,10 @@ import org.springframework.stereotype.Component;
  * @version 1.0
  */
 @Component
+@RequiredArgsConstructor
 public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public void commence(
@@ -27,12 +32,6 @@ public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
     ) throws IOException, ServletException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(jsonFailure("Authentication is required."));
-    }
-
-    private String jsonFailure(final String message) {
-        return """
-            {"success":false,"message":"%s","data":null,"timestamp":"%s"}
-            """.formatted(message, Instant.now());
+        objectMapper.writeValue(response.getWriter(), ApiResponse.failure("UNAUTHORIZED", "Authentication is required."));
     }
 }

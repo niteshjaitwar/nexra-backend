@@ -3,6 +3,7 @@ package com.nexra.hrms.nexra.modules.payroll.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record OrganizationProfileUpsertRequest(
@@ -19,6 +20,9 @@ public record OrganizationProfileUpsertRequest(
     @DecimalMin(value = "0.00", inclusive = true) BigDecimal defaultTaxPercent,
     @DecimalMin(value = "0.00", inclusive = true) BigDecimal defaultProvidentFundPercent,
     @Email String payrollContactEmail,
-    String payrollContactPhone
+    String payrollContactPhone,
+    @Size(max = 255) String brandingLogoPath,
+    @Size(max = 180) String brandingCompanyName,
+    @Size(max = 120) String brandingWatermarkText
 ) {
 }

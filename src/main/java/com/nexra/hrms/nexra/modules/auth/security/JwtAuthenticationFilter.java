@@ -1,6 +1,5 @@
 package com.nexra.hrms.nexra.modules.auth.security;
 
-import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -64,7 +63,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             );
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
-        } catch (JwtException | IllegalArgumentException exception) {
+        } catch (RuntimeException exception) {
             log.error("JwtAuthenticationFilter() - doFilterInternal() - Invalid JWT token: {}", exception.getMessage(), exception);
             SecurityContextHolder.clearContext();
         }

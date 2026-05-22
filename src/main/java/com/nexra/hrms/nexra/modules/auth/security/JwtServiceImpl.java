@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -87,20 +88,36 @@ public class JwtServiceImpl implements JwtService {
             .parseSignedClaims(token)
             .getPayload();
 
-        @SuppressWarnings("unchecked")
-        Set<String> roles = Set.copyOf((List<String>) claims.get("roles", List.class));
+        final String userId = requireClaim(claims, "uid");
+        final String tenant = requireClaim(claims, "tenant");
+        final String subject = claims.getSubject();
+        if (subject == null || subject.isBlank()) {
+            throw new IllegalArgumentException("JWT subject is required.");
+        }
+
+        final List<?> rawRoles = claims.get("roles", List.class);
+        if (rawRoles == null) {
+            throw new IllegalArgumentException("JWT roles claim is required.");
+        }
+        Set<String> roles = rawRoles.stream()
+            .filter(Objects::nonNull)
+            .map(Object::toString)
+            .collect(Collectors.toSet());
 
         @SuppressWarnings("unchecked")
-        List<String> rawProducts = (List<String>) claims.getOrDefault("products", List.of());
-        Set<String> products = new HashSet<>(rawProducts);
+        List<?> rawProducts = (List<?>) claims.getOrDefault("products", List.of());
+        Set<String> products = rawProducts.stream()
+            .filter(Objects::nonNull)
+            .map(Object::toString)
+            .collect(Collectors.toCollection(HashSet::new));
 
         @SuppressWarnings("unchecked")
         Map<String, String> productRoles = (Map<String, String>) claims.getOrDefault("product_roles", Map.of());
 
         return new JwtPrincipal(
-            UUID.fromString(claims.get("uid", String.class)),
-            claims.get("tenant", String.class),
-            claims.getSubject(),
+            UUID.fromString(userId),
+            tenant,
+            subject,
             roles,
             products,
             productRoles
@@ -114,6 +131,17 @@ public class JwtServiceImpl implements JwtService {
      */
     private SecretKey signingKey() {
         byte[] bytes = authProperties.getJwt().getSecret().getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < 32) {
+            throw new IllegalStateException("AUTH_JWT_SECRET must be at least 32 bytes.");
+        }
         return Keys.hmacShaKeyFor(bytes);
+    }
+
+    private String requireClaim(final Claims claims, final String name) {
+        final String value = claims.get(name, String.class);
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("JWT " + name + " claim is required.");
+        }
+        return value;
     }
 }

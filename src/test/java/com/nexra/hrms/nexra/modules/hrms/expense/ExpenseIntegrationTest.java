@@ -136,6 +136,97 @@ class ExpenseIntegrationTest {
             .andExpect(jsonPath("$.message").value("User cannot access expense claims for another employee"));
     }
 
+    @Test
+    void rejectsMalformedJsonPayloads() throws Exception {
+        String token = bearerToken(UUID.randomUUID(), "ACME", List.of("ROLE_FINANCE_ADMIN"));
+
+        mockMvc.perform(post("/api/v1/expense/claims")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"tenantCode":"ACME","employeeId":"%s","claimDate":"2026-03-15"
+                    """.formatted(UUID.randomUUID())))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("MALFORMED_JSON"))
+            .andExpect(jsonPath("$.message").value("Invalid request payload."));
+    }
+
+    @Test
+    void rejectsCategoryAdministrationForNonAdminRole() throws Exception {
+        String token = bearerToken(UUID.randomUUID(), "ACME", List.of("ROLE_EMPLOYEE"));
+
+        mockMvc.perform(put("/api/v1/expense/categories")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "code":"MEAL",
+                      "name":"Meals",
+                      "maxAmountPerClaim":1500,
+                      "requiresReceipt":false,
+                      "active":true
+                    }
+                    """))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("User does not have expense administration permission"));
+    }
+
+    @Test
+    void rejectsReimbursementForNonApprovedClaims() throws Exception {
+        UUID employeeId = UUID.randomUUID();
+        String token = bearerToken(employeeId, "ACME", List.of("ROLE_FINANCE_ADMIN"));
+
+        mockMvc.perform(put("/api/v1/expense/categories")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "code":"OFFICE",
+                      "name":"Office Supplies",
+                      "maxAmountPerClaim":3000,
+                      "requiresReceipt":false,
+                      "active":true
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        String claimResp = mockMvc.perform(post("/api/v1/expense/claims")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "employeeId":"%s",
+                      "claimDate":"2026-03-20",
+                      "title":"Stationery",
+                      "currency":"INR",
+                      "items":[
+                        {
+                          "expenseDate":"2026-03-20",
+                          "categoryCode":"OFFICE",
+                          "description":"Pens and Notebooks",
+                          "amount":900
+                        }
+                      ]
+                    }
+                    """.formatted(employeeId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("SUBMITTED"))
+            .andReturn().getResponse().getContentAsString();
+
+        String claimId = MAPPER.readTree(claimResp).path("data").path("claimId").asText();
+
+        mockMvc.perform(post("/api/v1/expense/claims/{id}/reimburse", claimId)
+                .header("Authorization", "Bearer " + token)
+                .param("tenantCode", "ACME"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("Only approved claims can be reimbursed"));
+    }
+
     private String bearerToken(final UUID userId, final String tenantCode, final List<String> roles) {
         SecretKey key = Keys.hmacShaKeyFor("01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()

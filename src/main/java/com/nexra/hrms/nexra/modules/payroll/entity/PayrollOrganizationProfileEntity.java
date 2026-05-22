@@ -57,6 +57,15 @@ public class PayrollOrganizationProfileEntity extends AbstractAuditableEntity {
     @Column(name = "payroll_contact_phone", length = 40)
     private String payrollContactPhone;
 
+    @Column(name = "branding_logo_path", length = 255)
+    private String brandingLogoPath;
+
+    @Column(name = "branding_company_name", length = 180)
+    private String brandingCompanyName;
+
+    @Column(name = "branding_watermark_text", length = 120)
+    private String brandingWatermarkText;
+
     public String getId() {
         return id;
     }
@@ -175,5 +184,29 @@ public class PayrollOrganizationProfileEntity extends AbstractAuditableEntity {
 
     public void setPayrollContactPhone(final String payrollContactPhone) {
         this.payrollContactPhone = payrollContactPhone;
+    }
+
+    public String getBrandingLogoPath() {
+        return brandingLogoPath;
+    }
+
+    public void setBrandingLogoPath(final String brandingLogoPath) {
+        this.brandingLogoPath = brandingLogoPath;
+    }
+
+    public String getBrandingCompanyName() {
+        return brandingCompanyName;
+    }
+
+    public void setBrandingCompanyName(final String brandingCompanyName) {
+        this.brandingCompanyName = brandingCompanyName;
+    }
+
+    public String getBrandingWatermarkText() {
+        return brandingWatermarkText;
+    }
+
+    public void setBrandingWatermarkText(final String brandingWatermarkText) {
+        this.brandingWatermarkText = brandingWatermarkText;
     }
 }

@@ -17,6 +17,9 @@ public class PayrollProperties {
     private final Brand brand = new Brand();
 
     @Valid
+    private final TenantBranding tenantBranding = new TenantBranding();
+
+    @Valid
     private final Security security = new Security();
 
     @Getter
@@ -35,5 +38,15 @@ public class PayrollProperties {
     public static class Security {
         @NotBlank
         private String jwtSecret;
+    }
+
+    @Getter
+    @Setter
+    public static class TenantBranding {
+        @NotBlank
+        private String logoStoragePath;
+        @NotBlank
+        private String publicLogoBasePath;
+        private long maxLogoBytes = 2_097_152L;
     }
 }

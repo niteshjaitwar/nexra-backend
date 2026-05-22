@@ -3,6 +3,9 @@ package com.nexra.hrms.nexra.modules.auth;
 import com.nexra.hrms.nexra.modules.auth.config.AuthProperties;
 import com.nexra.hrms.nexra.modules.auth.entity.Tenant;
 import com.nexra.hrms.nexra.modules.auth.entity.UserAccount;
+import com.nexra.hrms.nexra.modules.auth.entity.UserProductAccess;
+import com.nexra.hrms.nexra.modules.auth.enums.ProductRole;
+import com.nexra.hrms.nexra.modules.auth.enums.ProductType;
 import com.nexra.hrms.nexra.modules.auth.enums.UserRole;
 import com.nexra.hrms.nexra.modules.auth.repository.UserProductAccessRepository;
 import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
@@ -71,5 +74,36 @@ class JwtServiceImplTest {
         assertThat(principal.tenantCode()).isEqualTo("acme");
         assertThat(principal.email()).isEqualTo("user@acme.com");
         assertThat(principal.roles()).containsExactlyInAnyOrder("ROLE_USER", "ROLE_TENANT_ADMIN");
+        assertThat(principal.products()).isEmpty();
+        assertThat(principal.productRoles()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("generateAccessToken includes product access claims")
+    void shouldIncludeProductClaims() {
+        UUID userId = UUID.randomUUID();
+        Tenant tenant = new Tenant();
+        tenant.setCode("acme");
+
+        UserAccount user = mock(UserAccount.class);
+        when(user.getId()).thenReturn(userId);
+        when(user.getTenant()).thenReturn(tenant);
+        when(user.getEmail()).thenReturn("admin@acme.com");
+        when(user.getRoles()).thenReturn(Set.of(UserRole.ROLE_TENANT_ADMIN));
+
+        UserProductAccess crm = new UserProductAccess();
+        crm.setProduct(ProductType.CRM);
+        crm.setProductRole(ProductRole.SALES_MANAGER);
+        UserProductAccess hrms = new UserProductAccess();
+        hrms.setProduct(ProductType.HRMS);
+        hrms.setProductRole(ProductRole.TENANT_ADMIN);
+        when(userProductAccessRepository.findByUser(user)).thenReturn(List.of(crm, hrms));
+
+        JwtPrincipal principal = jwtService.parsePrincipal(jwtService.generateAccessToken(user));
+
+        assertThat(principal.products()).containsExactlyInAnyOrder("CRM", "HRMS");
+        assertThat(principal.productRoles())
+            .containsEntry("CRM", "SALES_MANAGER")
+            .containsEntry("HRMS", "TENANT_ADMIN");
     }
 }

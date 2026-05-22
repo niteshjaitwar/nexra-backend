@@ -18,6 +18,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class EmployeeCoreRequestCorrelationFilter extends OncePerRequestFilter {
 
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
+    private static final String MDC_KEY = "requestId";
+    private static final String MODULE_PATH_PREFIX = "/api/v1/employee-core/";
+
+    @Override
+    protected boolean shouldNotFilter(final HttpServletRequest request) {
+        return !request.getRequestURI().startsWith(MODULE_PATH_PREFIX);
+    }
 
     @Override
     protected void doFilterInternal(
@@ -25,13 +32,19 @@ public class EmployeeCoreRequestCorrelationFilter extends OncePerRequestFilter {
         final HttpServletResponse response,
         final FilterChain filterChain
     ) throws ServletException, IOException {
-        String requestId = resolveRequestId(request);
-        MDC.put("requestId", requestId);
+        final String existing = MDC.get(MDC_KEY);
+        final boolean alreadySet = StringUtils.hasText(existing);
+        final String requestId = alreadySet ? existing : resolveRequestId(request);
+        if (!alreadySet) {
+            MDC.put(MDC_KEY, requestId);
+        }
         response.setHeader(REQUEST_ID_HEADER, requestId);
         try {
             filterChain.doFilter(request, response);
         } finally {
-            MDC.remove("requestId");
+            if (!alreadySet) {
+                MDC.remove(MDC_KEY);
+            }
         }
     }
 

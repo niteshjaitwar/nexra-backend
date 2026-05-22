@@ -4,14 +4,14 @@ Scope: leads, accounts, contacts, deals, activities, tasks, pipeline, campaigns,
 
 ## Current State
 
-The module has persistent CRM lead APIs and a database schema for leads, accounts, contacts, deals, activities, and tasks. Service/controller coverage is currently lead-focused. Product-level CRM mutation endpoints are placeholder-style and must be replaced with real workflows.
+The module has persistent CRM lead APIs and a database schema for leads, accounts, contacts, deals, activities, and tasks. Service/controller coverage is currently lead-focused. The generic placeholder mutation endpoint has been removed.
 
 ## Bugs
 
 - `BUG`: Update misleading comments that describe the lead service as in-memory.
 - `BUG`: Ensure lead list sorting is deterministic and indexed.
 - `BUG`: Prevent deleting leads that are converted to accounts/deals unless using archival workflow.
-- `BUG`: Replace generic `/records/mutate` acceptance with real domain commands or remove before launch.
+- `BUG`: Ensure no generic placeholder mutation endpoints are reintroduced.
 
 ## Enhancements
 
@@ -64,4 +64,3 @@ The module has persistent CRM lead APIs and a database schema for leads, account
 
 - CRM supports a real sales lifecycle from lead capture to deal close, plus activity/task history.
 - Placeholder CRM product mutation endpoints are gone or converted into real commands.
-

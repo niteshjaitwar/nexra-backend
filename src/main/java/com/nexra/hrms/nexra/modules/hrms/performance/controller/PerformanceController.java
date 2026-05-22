@@ -15,6 +15,8 @@ import com.nexra.hrms.nexra.modules.hrms.performance.service.IPerformanceService
 import com.nexra.hrms.nexra.modules.hrms.employee.validation.TenantCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -82,8 +84,8 @@ public class PerformanceController {
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String employeeId,
         @RequestParam(required = false) final String status,
-        @RequestParam(defaultValue = "0") final int page,
-        @RequestParam(defaultValue = "20") final int size,
+        @RequestParam(defaultValue = "0") @Min(0) final int page,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) final int size,
         final HttpServletRequest httpRequest
     ) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
@@ -127,8 +129,8 @@ public class PerformanceController {
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
         @RequestParam(required = false) final String employeeId,
         @RequestParam(required = false) final String status,
-        @RequestParam(defaultValue = "0") final int page,
-        @RequestParam(defaultValue = "20") final int size,
+        @RequestParam(defaultValue = "0") @Min(0) final int page,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) final int size,
         final HttpServletRequest httpRequest
     ) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(

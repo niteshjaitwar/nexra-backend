@@ -97,6 +97,7 @@ public class RecruitmentServiceImpl implements IRecruitmentService {
         String tenant = normalizeTenant(request.tenantCode());
         jobRepository.findByTenantCodeAndJobId(tenant, request.jobId())
             .orElseThrow(() -> new RecruitmentResourceNotFoundException("Recruitment job not found: " + request.jobId()));
+        assertCandidateIdentityUnique(tenant, request.email(), request.phone());
 
         CandidateEntity entity = new CandidateEntity();
         entity.setCandidateId(UUID.randomUUID().toString());
@@ -214,6 +215,21 @@ public class RecruitmentServiceImpl implements IRecruitmentService {
     private CandidateEntity findCandidate(final String tenantCode, final String candidateId) {
         return candidateRepository.findByTenantCodeAndCandidateId(tenantCode, candidateId)
             .orElseThrow(() -> new RecruitmentResourceNotFoundException("Recruitment candidate not found: " + candidateId));
+    }
+
+    private void assertCandidateIdentityUnique(
+        final String tenantCode,
+        final String email,
+        final String phone
+    ) {
+        final String normalizedEmail = blankToNull(email);
+        if (normalizedEmail != null && candidateRepository.existsByTenantCodeAndEmailIgnoreCase(tenantCode, normalizedEmail)) {
+            throw new RecruitmentBusinessException("Candidate already exists for tenant with the same email.");
+        }
+        final String normalizedPhone = blankToNull(phone);
+        if (normalizedPhone != null && candidateRepository.existsByTenantCodeAndPhone(tenantCode, normalizedPhone)) {
+            throw new RecruitmentBusinessException("Candidate already exists for tenant with the same phone.");
+        }
     }
 
     private JobView toJobView(final JobEntity entity) {

@@ -1,10 +1,12 @@
 package com.nexra.hrms.nexra.modules.auth.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nexra.hrms.nexra.common.api.ApiResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.Instant;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -17,7 +19,10 @@ import org.springframework.stereotype.Component;
  * @version 1.0
  */
 @Component
+@RequiredArgsConstructor
 public class JsonAccessDeniedHandler implements AccessDeniedHandler {
+
+    private final ObjectMapper objectMapper;
 
     @Override
     public void handle(
@@ -27,12 +32,6 @@ public class JsonAccessDeniedHandler implements AccessDeniedHandler {
     ) throws IOException, ServletException {
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(jsonFailure("Access denied."));
-    }
-
-    private String jsonFailure(final String message) {
-        return """
-            {"success":false,"message":"%s","data":null,"timestamp":"%s"}
-            """.formatted(message, Instant.now());
+        objectMapper.writeValue(response.getWriter(), ApiResponse.failure("FORBIDDEN", "Access denied."));
     }
 }

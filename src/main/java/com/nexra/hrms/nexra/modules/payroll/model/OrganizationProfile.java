@@ -18,6 +18,9 @@ public record OrganizationProfile(
     BigDecimal defaultProvidentFundPercent,
     String payrollContactEmail,
     String payrollContactPhone,
+    String brandingLogoPath,
+    String brandingCompanyName,
+    String brandingWatermarkText,
     Instant updatedAt,
     String updatedBy
 ) {

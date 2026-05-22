@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.MDC;
 
 /**
  * Canonical API envelope returned by every REST endpoint across the Nexra
@@ -88,7 +89,7 @@ public record ApiResponse<T>(
      * @return immutable envelope with success=false.
      */
     public static ApiResponse<Void> failure(final String code, final String message) {
-        return new ApiResponse<>(false, code, message, null, null, null, Instant.now());
+        return new ApiResponse<>(false, code, message, null, null, requestMeta(), Instant.now());
     }
 
     /**
@@ -111,7 +112,7 @@ public record ApiResponse<T>(
      * @return immutable envelope with success=false and errors populated.
      */
     public static ApiResponse<Void> failure(final String code, final String message, final List<ApiError> errors) {
-        return new ApiResponse<>(false, code, message, null, errors, null, Instant.now());
+        return new ApiResponse<>(false, code, message, null, errors, requestMeta(), Instant.now());
     }
 
     /**
@@ -125,5 +126,10 @@ public record ApiResponse<T>(
         final Map<String, Object> merged = new java.util.LinkedHashMap<>(meta == null ? Map.of() : meta);
         merged.put(key, value);
         return new ApiResponse<>(success, code, message, data, errors, merged, timestamp);
+    }
+
+    private static Map<String, Object> requestMeta() {
+        final String requestId = MDC.get("requestId");
+        return requestId == null || requestId.isBlank() ? null : Map.of("requestId", requestId);
     }
 }

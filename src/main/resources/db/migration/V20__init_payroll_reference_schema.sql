@@ -1,3 +1,3 @@
--- Payroll service currently operates as a stateless/reference in-memory payroll engine.
--- This placeholder migration reserves Flyway versioning for future persistent payroll storage.
+-- Historical placeholder migration kept for backward-compatible Flyway version ordering.
+-- Persistent payroll storage is implemented in V21 and hardened by subsequent migrations.
 -- Author: niteshjaitwar

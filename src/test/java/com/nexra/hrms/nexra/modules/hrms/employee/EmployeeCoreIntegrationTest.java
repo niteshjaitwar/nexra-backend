@@ -221,6 +221,47 @@ class EmployeeCoreIntegrationTest {
             .andExpect(jsonPath("$.message").value("Department code already exists for tenant: fin"));
     }
 
+    @Test
+    void rejectsEmployeeCreationWhenDepartmentDoesNotExist() throws Exception {
+        String token = bearerToken("ACME", List.of("ROLE_HR_ADMIN"));
+
+        mockMvc.perform(post("/api/v1/employee-core/employees")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "employeeCode":"E404",
+                      "firstName":"Ghost",
+                      "lastName":"User",
+                      "workEmail":"ghost.user@acme.test",
+                      "departmentId":"missing-department-id",
+                      "designation":"Engineer",
+                      "status":"ACTIVE",
+                      "joinDate":"2026-01-01",
+                      "monthlyBasicSalary":50000
+                    }
+                    """))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("Department not found for tenant: missing-department-id"));
+    }
+
+    @Test
+    void rejectsMalformedJsonPayloads() throws Exception {
+        String token = bearerToken("ACME", List.of("ROLE_HR_ADMIN"));
+
+        mockMvc.perform(post("/api/v1/employee-core/departments")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"tenantCode":"ACME","code":"QA","name":"Quality"
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("MALFORMED_JSON"))
+            .andExpect(jsonPath("$.message").value("Invalid request payload."));
+    }
+
     private String bearerToken(final String tenantCode, final List<String> roles) {
         SecretKey key = Keys.hmacShaKeyFor("01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()

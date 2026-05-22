@@ -1,6 +1,7 @@
 package com.nexra.hrms.nexra.modules.hrms.performance.exception;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
+import com.nexra.hrms.nexra.common.exception.ApiErrorResponseFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
@@ -27,7 +28,7 @@ public class PerformanceGlobalExceptionHandler {
         final PerformanceUnauthorizedException exception,
         final HttpServletRequest request
     ) {
-        return build(HttpStatus.UNAUTHORIZED, exception.getMessage(), request);
+        return build(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", exception.getMessage(), request);
     }
 
     @ExceptionHandler(PerformanceForbiddenException.class)
@@ -35,7 +36,7 @@ public class PerformanceGlobalExceptionHandler {
         final PerformanceForbiddenException exception,
         final HttpServletRequest request
     ) {
-        return build(HttpStatus.FORBIDDEN, exception.getMessage(), request);
+        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", exception.getMessage(), request);
     }
 
     @ExceptionHandler(PerformanceResourceNotFoundException.class)
@@ -43,7 +44,7 @@ public class PerformanceGlobalExceptionHandler {
         final PerformanceResourceNotFoundException exception,
         final HttpServletRequest request
     ) {
-        return build(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+        return build(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage(), request);
     }
 
     @ExceptionHandler(PerformanceBusinessException.class)
@@ -51,7 +52,7 @@ public class PerformanceGlobalExceptionHandler {
         final PerformanceBusinessException exception,
         final HttpServletRequest request
     ) {
-        return build(HttpStatus.CONFLICT, exception.getMessage(), request);
+        return build(HttpStatus.CONFLICT, "BUSINESS_RULE_VIOLATION", exception.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -59,11 +60,12 @@ public class PerformanceGlobalExceptionHandler {
         final MethodArgumentNotValidException exception,
         final HttpServletRequest request
     ) {
-        String message = exception.getBindingResult().getFieldErrors().stream()
+        final String message = exception.getBindingResult().getFieldErrors().stream()
             .findFirst()
             .map(error -> error.getField() + " " + error.getDefaultMessage())
             .orElse("Validation failed.");
-        return build(HttpStatus.BAD_REQUEST, message, request);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ApiErrorResponseFactory.validation(exception, message));
     }
 
     @ExceptionHandler(Exception.class)
@@ -72,14 +74,15 @@ public class PerformanceGlobalExceptionHandler {
         final HttpServletRequest request
     ) {
         log.error("Unhandled performance module exception", exception);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error.", request);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Unexpected server error.", request);
     }
 
     private ResponseEntity<ApiResponse<Void>> build(
         final HttpStatus status,
+        final String code,
         final String message,
         final HttpServletRequest request
     ) {
-        return ResponseEntity.status(status).body(ApiResponse.failure(message));
+        return ResponseEntity.status(status).body(ApiErrorResponseFactory.failure(code, message));
     }
 }

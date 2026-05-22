@@ -12,11 +12,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import java.util.Base64;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -58,11 +62,33 @@ class PayrollIntegrationTest {
                       "currency":"INR",
                       "defaultTaxPercent":10,
                       "defaultProvidentFundPercent":12,
-                      "payrollContactEmail":"payroll@acme.test"
+                      "payrollContactEmail":"payroll@acme.test",
+                      "brandingLogoPath":"/branding/nexra-banner.png",
+                      "brandingCompanyName":"Acme Payroll",
+                      "brandingWatermarkText":"ACME CONFIDENTIAL"
                     }
                     """))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.tenantCode").value("ACME"));
+            .andExpect(jsonPath("$.data.tenantCode").value("ACME"))
+            .andExpect(jsonPath("$.data.brandingCompanyName").value("Acme Payroll"));
+
+        MockMultipartFile logoFile = new MockMultipartFile(
+            "logoFile",
+            "acme-logo.png",
+            MediaType.IMAGE_PNG_VALUE,
+            Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=")
+        );
+        MockMultipartHttpServletRequestBuilder logoUpload = multipart("/api/v1/payroll/organization-profile/logo")
+            .file(logoFile)
+            .param("tenantCode", "ACME");
+        logoUpload.with(request -> {
+            request.setMethod("POST");
+            return request;
+        });
+
+        mockMvc.perform(logoUpload.header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.brandingLogoPath").value(containsString("/api/v1/branding/assets/ACME/logo-")));
 
         mockMvc.perform(post("/api/v1/payroll/employees")
                 .header("Authorization", "Bearer " + token)
@@ -114,6 +140,13 @@ class PayrollIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_PDF))
             .andExpect(header().string("Content-Disposition", containsString("attachment;")));
+
+        mockMvc.perform(get("/api/v1/payroll/payslips/{slipId}/html", slipId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("Acme Payroll")))
+            .andExpect(content().string(containsString("ACME CONFIDENTIAL")))
+            .andExpect(content().string(containsString("data:image/png;base64,")));
 
         mockMvc.perform(get("/api/v1/payroll/dependencies/auth")
                 .header("Authorization", "Bearer " + token))
@@ -175,6 +208,189 @@ class PayrollIntegrationTest {
         mockMvc.perform(get("/api/v1/branding"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.companyName").value("Nexra HRMS Test"));
+    }
+
+    @Test
+    void exposesTenantBrandingEndpoint() throws Exception {
+        String token = bearerToken("ACME", List.of("ROLE_PAYROLL_ADMIN"));
+        mockMvc.perform(put("/api/v1/payroll/organization-profile")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "organizationName":"Acme Corp",
+                      "legalEntityName":"Acme Legal Pvt Ltd",
+                      "addressLine1":"Line 1",
+                      "city":"Pune",
+                      "state":"Maharashtra",
+                      "country":"India",
+                      "postalCode":"411001",
+                      "currency":"INR",
+                      "defaultTaxPercent":10,
+                      "defaultProvidentFundPercent":12,
+                      "payrollContactEmail":"payroll@acme.test",
+                      "brandingCompanyName":"Acme Payroll",
+                      "brandingWatermarkText":"ACME CONFIDENTIAL"
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/branding/ACME"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.companyName").value("Acme Payroll"))
+            .andExpect(jsonPath("$.data.watermarkText").value("ACME CONFIDENTIAL"));
+    }
+
+    @Test
+    void rejectsLogoUploadForTenantMismatch() throws Exception {
+        String token = bearerToken("OTHER", List.of("ROLE_PAYROLL_ADMIN"));
+        MockMultipartFile logoFile = new MockMultipartFile(
+            "logoFile",
+            "acme-logo.png",
+            MediaType.IMAGE_PNG_VALUE,
+            Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=")
+        );
+        MockMultipartHttpServletRequestBuilder request = multipart("/api/v1/payroll/organization-profile/logo")
+            .file(logoFile)
+            .param("tenantCode", "ACME");
+        request.with(r -> {
+            r.setMethod("POST");
+            return r;
+        });
+
+        mockMvc.perform(request.header("Authorization", "Bearer " + token))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("Tenant mismatch for payroll action"));
+    }
+
+    @Test
+    void rejectsLogoUploadForNonAdminRole() throws Exception {
+        String token = bearerToken("ACME", List.of("ROLE_EMPLOYEE"));
+        MockMultipartFile logoFile = new MockMultipartFile(
+            "logoFile",
+            "acme-logo.png",
+            MediaType.IMAGE_PNG_VALUE,
+            Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=")
+        );
+        MockMultipartHttpServletRequestBuilder request = multipart("/api/v1/payroll/organization-profile/logo")
+            .file(logoFile)
+            .param("tenantCode", "ACME");
+        request.with(r -> {
+            r.setMethod("POST");
+            return r;
+        });
+
+        mockMvc.perform(request.header("Authorization", "Bearer " + token))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("User does not have payroll administration permission"));
+    }
+
+    @Test
+    void rejectsInvalidLogoPayload() throws Exception {
+        String token = bearerToken("ACME", List.of("ROLE_PAYROLL_ADMIN"));
+        mockMvc.perform(put("/api/v1/payroll/organization-profile")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "organizationName":"Acme Corp",
+                      "legalEntityName":"Acme Legal Pvt Ltd",
+                      "addressLine1":"Line 1",
+                      "city":"Pune",
+                      "state":"Maharashtra",
+                      "country":"India",
+                      "postalCode":"411001",
+                      "currency":"INR",
+                      "defaultTaxPercent":10,
+                      "defaultProvidentFundPercent":12
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        MockMultipartFile badFile = new MockMultipartFile(
+            "logoFile",
+            "acme-logo.png",
+            MediaType.IMAGE_PNG_VALUE,
+            "not-an-image".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartHttpServletRequestBuilder request = multipart("/api/v1/payroll/organization-profile/logo")
+            .file(badFile)
+            .param("tenantCode", "ACME");
+        request.with(r -> {
+            r.setMethod("POST");
+            return r;
+        });
+
+        mockMvc.perform(request.header("Authorization", "Bearer " + token))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Logo file content is not a valid image."));
+    }
+
+    @Test
+    void rejectsLogoUploadWhenOrganizationProfileMissing() throws Exception {
+        String tenantCode = "MISSING_TENANT";
+        String token = bearerToken(tenantCode, List.of("ROLE_PAYROLL_ADMIN"));
+        MockMultipartFile logoFile = new MockMultipartFile(
+            "logoFile",
+            "acme-logo.png",
+            MediaType.IMAGE_PNG_VALUE,
+            Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=")
+        );
+        MockMultipartHttpServletRequestBuilder request = multipart("/api/v1/payroll/organization-profile/logo")
+            .file(logoFile)
+            .param("tenantCode", tenantCode);
+        request.with(r -> {
+            r.setMethod("POST");
+            return r;
+        });
+
+        mockMvc.perform(request.header("Authorization", "Bearer " + token))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Organization profile not found for tenant: " + tenantCode));
+    }
+
+    @Test
+    void rejectsUnsupportedLogoFileType() throws Exception {
+        String token = bearerToken("ACME", List.of("ROLE_PAYROLL_ADMIN"));
+        mockMvc.perform(put("/api/v1/payroll/organization-profile")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "organizationName":"Acme Corp",
+                      "legalEntityName":"Acme Legal Pvt Ltd",
+                      "addressLine1":"Line 1",
+                      "city":"Pune",
+                      "state":"Maharashtra",
+                      "country":"India",
+                      "postalCode":"411001",
+                      "currency":"INR",
+                      "defaultTaxPercent":10,
+                      "defaultProvidentFundPercent":12
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        MockMultipartFile svgFile = new MockMultipartFile(
+            "logoFile",
+            "acme-logo.svg",
+            "image/svg+xml",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>".getBytes(StandardCharsets.UTF_8)
+        );
+        MockMultipartHttpServletRequestBuilder request = multipart("/api/v1/payroll/organization-profile/logo")
+            .file(svgFile)
+            .param("tenantCode", "ACME");
+        request.with(r -> {
+            r.setMethod("POST");
+            return r;
+        });
+
+        mockMvc.perform(request.header("Authorization", "Bearer " + token))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Logo file type is not supported."));
     }
 
     @Test

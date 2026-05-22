@@ -25,6 +25,8 @@ public interface ProfileDirectoryService {
 
     List<EmployeeProfile> listEmployeeProfiles(String tenantCode, AuthenticatedPayrollUser actor);
 
+    OrganizationProfile updateOrganizationBrandingLogoPath(String tenantCode, String logoPath, AuthenticatedPayrollUser actor);
+
     OrganizationProfile getOrganizationProfileInternal(String tenantCode);
 
     EmployeeProfile getEmployeeProfileInternal(String tenantCode, String employeeId);

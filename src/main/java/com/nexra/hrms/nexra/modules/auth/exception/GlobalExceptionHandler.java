@@ -1,7 +1,7 @@
 package com.nexra.hrms.nexra.modules.auth.exception;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
-import java.util.stream.Collectors;
+import com.nexra.hrms.nexra.common.exception.ApiErrorResponseFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -9,7 +9,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -33,13 +32,16 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationException(final MethodArgumentNotValidException exception) {
-        String errors = exception.getBindingResult()
+        final String errors = exception.getBindingResult()
             .getFieldErrors()
             .stream()
-            .map(FieldError::getDefaultMessage)
-            .collect(Collectors.joining(", "));
+            .map(error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value.")
+            .distinct()
+            .reduce((left, right) -> left + ", " + right)
+            .orElse("Validation failed.");
         log.error("GlobalExceptionHandler() - handleValidationException() - Validation failed: {}", errors, exception);
-        return ResponseEntity.badRequest().body(ApiResponse.failure("VALIDATION_FAILED", errors));
+        return ResponseEntity.badRequest()
+            .body(ApiErrorResponseFactory.validation(exception, errors));
     }
 
     /**

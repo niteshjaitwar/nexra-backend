@@ -2,6 +2,8 @@
 
 Scope: final acceptance gates before commercial launch.
 
+Evidence pack template: `docs/release-evidence-template.md`
+
 ## Gate 1: Architecture
 
 - `TEST`: Module boundary tests pass.
@@ -72,4 +74,3 @@ Scope: final acceptance gates before commercial launch.
 ## Final Launch Rule
 
 The backend cannot be called enterprise market-launch ready until every gate above is passed with evidence. Passing `mvnw verify` is necessary but not sufficient.
-

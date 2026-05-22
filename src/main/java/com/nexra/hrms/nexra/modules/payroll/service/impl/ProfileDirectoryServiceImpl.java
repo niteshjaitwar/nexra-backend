@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * In-memory payroll profile directory for organization and employee reference profiles.
+ * Persistent payroll profile directory for organization and employee reference profiles.
  *
  * @author niteshjaitwar
  * @version 1.0
@@ -64,6 +64,9 @@ public class ProfileDirectoryServiceImpl implements ProfileDirectoryService {
         entity.setDefaultProvidentFundPercent(amountOrZero(request.defaultProvidentFundPercent()));
         entity.setPayrollContactEmail(blankToNullLower(request.payrollContactEmail()));
         entity.setPayrollContactPhone(blankToNull(request.payrollContactPhone()));
+        entity.setBrandingLogoPath(blankToNull(request.brandingLogoPath()));
+        entity.setBrandingCompanyName(blankToNull(request.brandingCompanyName()));
+        entity.setBrandingWatermarkText(blankToNull(request.brandingWatermarkText()));
         entity.setUpdatedBy(actor.email());
 
         PayrollOrganizationProfileEntity saved = organizationProfileRepository.save(entity);
@@ -132,6 +135,22 @@ public class ProfileDirectoryServiceImpl implements ProfileDirectoryService {
     }
 
     @Override
+    @Transactional
+    public OrganizationProfile updateOrganizationBrandingLogoPath(
+        final String tenantCode,
+        final String logoPath,
+        final AuthenticatedPayrollUser actor
+    ) {
+        verifyTenant(actor, tenantCode);
+        PayrollOrganizationProfileEntity entity = organizationProfileRepository
+            .findByTenantCodeIgnoreCase(tenantCode.trim().toUpperCase())
+            .orElseThrow(() -> new PayrollResourceNotFoundException("Organization profile not found for tenant: " + tenantCode));
+        entity.setBrandingLogoPath(blankToNull(logoPath));
+        entity.setUpdatedBy(actor.email());
+        return toModel(organizationProfileRepository.save(entity));
+    }
+
+    @Override
     public OrganizationProfile getOrganizationProfileInternal(final String tenantCode) {
         return organizationProfileRepository.findByTenantCodeIgnoreCase(tenantCode.trim().toUpperCase())
             .map(this::toModel)
@@ -180,6 +199,9 @@ public class ProfileDirectoryServiceImpl implements ProfileDirectoryService {
             entity.getDefaultProvidentFundPercent(),
             entity.getPayrollContactEmail(),
             entity.getPayrollContactPhone(),
+            entity.getBrandingLogoPath(),
+            entity.getBrandingCompanyName(),
+            entity.getBrandingWatermarkText(),
             entity.getUpdatedAt(),
             entity.getUpdatedBy()
         );

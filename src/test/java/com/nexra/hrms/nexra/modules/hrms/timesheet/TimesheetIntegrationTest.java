@@ -110,6 +110,62 @@ class TimesheetIntegrationTest {
             .andExpect(jsonPath("$.success").value(false));
     }
 
+    @Test
+    void rejectsMalformedJsonPayloads() throws Exception {
+        UUID employeeId = UUID.randomUUID();
+        String token = bearerToken(employeeId, "ACME", List.of("ROLE_MANAGER"));
+
+        mockMvc.perform(post("/api/v1/timesheet/entries")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"tenantCode":"ACME","employeeId":"%s","workDate":"2026-03-18","projectCode":"PRJ1"
+                    """.formatted(employeeId)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("MALFORMED_JSON"))
+            .andExpect(jsonPath("$.message").value("Invalid request payload."));
+    }
+
+    @Test
+    void rejectsProjectAdministrationForNonAdminRole() throws Exception {
+        UUID employeeId = UUID.randomUUID();
+        String token = bearerToken(employeeId, "ACME", List.of("ROLE_EMPLOYEE"));
+
+        mockMvc.perform(put("/api/v1/timesheet/projects")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "projectCode":"PRJX",
+                      "projectName":"Restricted",
+                      "clientName":"Client",
+                      "billable":true,
+                      "active":true
+                    }
+                    """))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("User does not have timesheet administration permission"));
+    }
+
+    @Test
+    void rejectsCrossEmployeeTimesheetAccessForNonAdmin() throws Exception {
+        UUID employeeId = UUID.randomUUID();
+        UUID anotherEmployeeId = UUID.randomUUID();
+        String token = bearerToken(employeeId, "ACME", List.of("ROLE_EMPLOYEE"));
+
+        mockMvc.perform(get("/api/v1/timesheet/entries")
+                .header("Authorization", "Bearer " + token)
+                .param("tenantCode", "ACME")
+                .param("employeeId", anotherEmployeeId.toString())
+                .param("fromDate", "2026-03-01")
+                .param("toDate", "2026-03-31"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("User cannot access another employee timesheet"));
+    }
+
     private String bearerToken(final UUID userId, final String tenantCode, final List<String> roles) {
         SecretKey key = Keys.hmacShaKeyFor("01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()

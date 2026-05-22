@@ -26,6 +26,8 @@ class ProductionReadinessValidatorTest {
         properties = validProductionProperties();
         when(environment.getProperty("app.auth.bootstrap.enabled", "false")).thenReturn("false");
         when(environment.getProperty("nexra.common.rate-limit.distributed-enabled", "false")).thenReturn("true");
+        when(environment.getProperty("spring.data.redis.host")).thenReturn("redis.internal");
+        when(environment.getProperty("spring.data.redis.port")).thenReturn("6379");
     }
 
     @Test
@@ -150,6 +152,7 @@ class ProductionReadinessValidatorTest {
 
         config.getMail().setEnabled(false);
         config.getMail().setFrom("noreply@nexra.local");
+        config.getSecurity().setRedisEnabled(true);
         config.getSecurity().setCorsAllowedOrigins(List.of("https://app.nexra.example", "https://hrms.nexra.example"));
         return config;
     }

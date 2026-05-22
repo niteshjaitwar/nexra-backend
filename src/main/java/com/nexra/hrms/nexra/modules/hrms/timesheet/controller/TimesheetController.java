@@ -14,6 +14,8 @@ import com.nexra.hrms.nexra.modules.hrms.timesheet.service.TimesheetService;
 import com.nexra.hrms.nexra.modules.hrms.employee.validation.TenantCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -154,8 +156,8 @@ public class TimesheetController {
         @RequestParam final String employeeId,
         @RequestParam(required = false) final LocalDate fromDate,
         @RequestParam(required = false) final LocalDate toDate,
-        @RequestParam(defaultValue = "0") final int page,
-        @RequestParam(defaultValue = "20") final int size,
+        @RequestParam(defaultValue = "0") @Min(0) final int page,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) final int size,
         final HttpServletRequest httpRequest
     ) {
         log.debug("TimesheetController - listEntries - tenantCode={}, employeeId={}, fromDate={}, toDate={}",

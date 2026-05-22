@@ -134,6 +134,110 @@ class LeaveManagementIntegrationTest {
             .andExpect(jsonPath("$.success").value(false));
     }
 
+    @Test
+    void rejectsMalformedJsonPayloads() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String token = bearerToken(userId, "ACME", List.of("ROLE_HR_ADMIN"));
+
+        mockMvc.perform(post("/api/v1/leave/requests")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"tenantCode":"ACME","employeeId":"%s","leaveTypeCode":"CL"
+                    """.formatted(userId)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("MALFORMED_JSON"))
+            .andExpect(jsonPath("$.message").value("Invalid request payload."));
+    }
+
+    @Test
+    void rejectsLeaveAdministrationForNonAdminRole() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String token = bearerToken(userId, "ACME", List.of("ROLE_EMPLOYEE"));
+
+        mockMvc.perform(put("/api/v1/leave/leave-types")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "code":"SL",
+                      "name":"Sick Leave",
+                      "paid":true,
+                      "defaultAnnualQuota":8
+                    }
+                    """))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("User does not have leave administration permission"));
+    }
+
+    @Test
+    void rejectsApprovalWhenLeaveBalanceIsInsufficient() throws Exception {
+        UUID userId = UUID.randomUUID();
+        String token = bearerToken(userId, "ACME", List.of("ROLE_HR_ADMIN"));
+
+        mockMvc.perform(put("/api/v1/leave/leave-types")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "code":"UL",
+                      "name":"Urgent Leave",
+                      "paid":true,
+                      "defaultAnnualQuota":5
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/v1/leave/balances")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "employeeId":"%s",
+                      "leaveTypeCode":"UL",
+                      "openingBalance":1,
+                      "accruedBalance":0,
+                      "adjustedBalance":0
+                    }
+                    """.formatted(userId)))
+            .andExpect(status().isOk());
+
+        String requestJson = mockMvc.perform(post("/api/v1/leave/requests")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "employeeId":"%s",
+                      "leaveTypeCode":"UL",
+                      "startDate":"2026-04-01",
+                      "endDate":"2026-04-03",
+                      "reason":"Travel"
+                    }
+                    """.formatted(userId)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String requestId = OBJECT_MAPPER.readTree(requestJson).path("data").path("requestId").asText();
+
+        mockMvc.perform(post("/api/v1/leave/requests/{requestId}/approve", requestId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "decisionComment":"Checking balance"
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.message").value("Insufficient leave balance. Available=1.00, requested=3.00"));
+    }
+
     private String bearerToken(final UUID userId, final String tenantCode, final List<String> roles) {
         SecretKey key = Keys.hmacShaKeyFor("01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()

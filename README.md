@@ -120,6 +120,7 @@ This executes:
 
 ## Documentation
 
+- [Project Documentation Pack](./docs/project-documents/00-index.md)
 - [Modular Monolith Architecture](./docs/modular-monolith-architecture.md)
 - [Production Delivery Plan](./docs/production-delivery-plan.md)
 - [Production Readiness Checklist](./docs/production-readiness-checklist.md)

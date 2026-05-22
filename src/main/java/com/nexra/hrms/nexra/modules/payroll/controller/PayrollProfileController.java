@@ -10,11 +10,13 @@ import com.nexra.hrms.nexra.modules.payroll.model.OrganizationProfile;
 import com.nexra.hrms.nexra.modules.payroll.security.AuthenticatedPayrollUser;
 import com.nexra.hrms.nexra.modules.payroll.security.PayrollAuthFilter;
 import com.nexra.hrms.nexra.modules.payroll.service.ProfileDirectoryService;
+import com.nexra.hrms.nexra.modules.payroll.service.TenantBrandingAssetService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Exposes payroll profile APIs for org-level payroll defaults and employee payroll profiles.
@@ -42,6 +45,7 @@ import org.springframework.validation.annotation.Validated;
 public class PayrollProfileController {
 
     private final ProfileDirectoryService profileDirectoryService;
+    private final TenantBrandingAssetService tenantBrandingAssetService;
 
     @PutMapping("/organization-profile")
     public ResponseEntity<ApiResponse<OrganizationProfile>> upsertOrganizationProfile(
@@ -67,6 +71,22 @@ public class PayrollProfileController {
             "Organization profile fetched successfully.",
             profileDirectoryService.getOrganizationProfile(tenantCode, actor)
         ));
+    }
+
+    @PostMapping("/organization-profile/logo")
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadOrganizationLogo(
+        @RequestParam @NotBlank @Size(max = 60) final String tenantCode,
+        @RequestParam("logoFile") final MultipartFile logoFile,
+        final HttpServletRequest httpRequest
+    ) {
+        AuthenticatedPayrollUser actor = currentUser(httpRequest);
+        requirePayrollManager(actor);
+        ensureTenantAccess(tenantCode, actor);
+        String logoPath = tenantBrandingAssetService.storeTenantLogo(tenantCode, logoFile);
+        profileDirectoryService.updateOrganizationBrandingLogoPath(tenantCode, logoPath, actor);
+        Map<String, String> payload = Map.of("tenantCode", tenantCode, "brandingLogoPath", logoPath);
+        log.info("PayrollProfileController - uploadOrganizationLogo - tenantCode={}", tenantCode);
+        return ResponseEntity.ok(ApiResponse.success("Organization logo uploaded successfully.", payload));
     }
 
     @PutMapping("/employees")
@@ -134,5 +154,12 @@ public class PayrollProfileController {
 
     private boolean hasRole(final AuthenticatedPayrollUser actor, final String role) {
         return actor.roles().contains(role) || actor.roles().contains("ROLE_" + role);
+    }
+
+    private void ensureTenantAccess(final String tenantCode, final AuthenticatedPayrollUser actor) {
+        if (tenantCode.equalsIgnoreCase(actor.tenantCode()) || hasRole(actor, "PLATFORM_ADMIN")) {
+            return;
+        }
+        throw new PayrollForbiddenException("Tenant mismatch for payroll action");
     }
 }

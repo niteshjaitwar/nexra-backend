@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexra
+  namespace: nexra
+  labels:
+    app: nexra
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: nexra
+  template:
+    metadata:
+      labels:
+        app: nexra
+    spec:
+      containers:
+      - name: nexra
+        image: ghcr.io/example-org/nexra:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: nexra-config
+        - secretRef:
+            name: nexra-secrets
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "768Mi"
+          limits:
+            cpu: "2"
+            memory: "2Gi"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 6
+        startupProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+
