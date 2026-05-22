@@ -90,7 +90,7 @@ class CrmLeadIntegrationTest {
 
         mockMvc.perform(delete("/api/v1/crm/leads/{leadId}", leadId)
                 .header("Authorization", "Bearer " + token))
-            .andExpect(status().isUnprocessableEntity())
+            .andExpect(status().is(422))
             .andExpect(jsonPath("$.success").value(false));
 
         final String createForDeleteResponse = mockMvc.perform(post("/api/v1/crm/leads")

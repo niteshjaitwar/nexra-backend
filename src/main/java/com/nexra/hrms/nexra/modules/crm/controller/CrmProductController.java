@@ -7,6 +7,7 @@ import com.nexra.hrms.nexra.common.exception.NexraValidationException;
 import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLeadStatus;
+import com.nexra.hrms.nexra.modules.crm.repository.CrmDealRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmLeadRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -43,6 +44,7 @@ public class CrmProductController {
     );
 
     private final CrmLeadRepository crmLeadRepository;
+    private final CrmDealRepository crmDealRepository;
     private final CrmProperties crmProperties;
 
     @GetMapping("/modules/{moduleKey}/pipeline")
@@ -58,16 +60,21 @@ public class CrmProductController {
     ) {
         final String tenantCode = resolveTenantCode();
         validateModuleKey(moduleKey);
-        final long totalRecords = crmLeadRepository.countByTenantCodeIgnoreCase(tenantCode);
-        final long wonCount = crmLeadRepository.countByTenantCodeIgnoreCaseAndStatus(tenantCode, CrmLeadStatus.WON);
-        final long openLeadCount = totalRecords - wonCount;
-        final long openPipelineValue = openLeadCount * 125000L;
+        final long totalLeads = crmLeadRepository.countByTenantCodeIgnoreCase(tenantCode);
+        final long wonLeadCount = crmLeadRepository.countByTenantCodeIgnoreCaseAndStatus(tenantCode, CrmLeadStatus.WON);
+        final long totalDeals = crmDealRepository.countByTenantCodeIgnoreCase(tenantCode);
+        final long wonDeals = crmDealRepository.countByTenantCodeIgnoreCaseAndStageIgnoreCase(tenantCode, "WON");
+        final long openDeals = Math.max(0L, totalDeals - wonDeals);
+        final long estimatedOpenPipelineValue = openDeals * 125000L;
 
         return ResponseEntity.ok(ApiResponse.ok(Map.of(
             "moduleKey", moduleKey,
-            "totalRecords", totalRecords,
-            "openPipelineValue", openPipelineValue,
-            "wonCount", wonCount
+            "totalLeads", totalLeads,
+            "wonLeadCount", wonLeadCount,
+            "totalDeals", totalDeals,
+            "wonDeals", wonDeals,
+            "openDeals", openDeals,
+            "openPipelineValue", estimatedOpenPipelineValue
         ), "CRM pipeline snapshot fetched successfully."));
     }
 
