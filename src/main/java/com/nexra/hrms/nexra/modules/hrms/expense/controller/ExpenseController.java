@@ -32,10 +32,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Exposes tenant-scoped expense APIs for categories, claims, approvals, and reimbursements.
  */
+@Tag(name = "Expense", description = "Expense APIs.")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/expense")
@@ -50,6 +54,14 @@ public class ExpenseController {
      *
      * @return status payload
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> status() {
         return ResponseEntity.ok(ApiResponse.success("expense service is available.", Map.of(
@@ -64,6 +76,14 @@ public class ExpenseController {
      *
      * @return capabilities payload
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/capabilities")
     public ResponseEntity<ApiResponse<Map<String, Object>>> capabilities() {
         return ResponseEntity.ok(ApiResponse.success("expense capabilities fetched successfully.", Map.of(
@@ -80,6 +100,14 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return category response
      */
+    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PutMapping("/categories")
     public ResponseEntity<ApiResponse<ExpenseCategoryView>> upsertCategory(
         @Valid @RequestBody final ExpenseCategoryUpsertRequest request,
@@ -100,6 +128,14 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return categories response
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/categories")
     public ResponseEntity<ApiResponse<List<ExpenseCategoryView>>> listCategories(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
@@ -120,6 +156,14 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/claims")
     public ResponseEntity<ApiResponse<ExpenseClaimView>> createClaim(
         @Valid @RequestBody final ExpenseClaimCreateRequest request,
@@ -142,6 +186,14 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claims response
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/claims")
     public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<ExpenseClaimView>>> listClaims(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
@@ -169,6 +221,14 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/claims/{claimId}")
     public ResponseEntity<ApiResponse<ExpenseClaimView>> getClaim(
         @PathVariable final String claimId,
@@ -189,6 +249,14 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/claims/{claimId}/approve")
     public ResponseEntity<ApiResponse<ExpenseClaimView>> approve(
         @PathVariable final String claimId,
@@ -210,6 +278,14 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/claims/{claimId}/reject")
     public ResponseEntity<ApiResponse<ExpenseClaimView>> reject(
         @PathVariable final String claimId,
@@ -231,6 +307,14 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/claims/{claimId}/reimburse")
     public ResponseEntity<ApiResponse<ExpenseClaimView>> reimburse(
         @PathVariable final String claimId,

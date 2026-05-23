@@ -34,6 +34,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Exposes tenant-scoped timesheet APIs for projects, entries, approvals, and summary.
@@ -41,6 +44,7 @@ import org.springframework.validation.annotation.Validated;
  * @author niteshjaitwar
  * @version 1.0
  */
+@Tag(name = "Timesheet", description = "Timesheet APIs.")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/timesheet")
@@ -55,6 +59,14 @@ public class TimesheetController {
      *
      * @return status payload
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> status() {
         return ResponseEntity.ok(ApiResponse.success("timesheet service is available.", Map.of(
@@ -69,6 +81,14 @@ public class TimesheetController {
      *
      * @return capabilities payload
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/capabilities")
     public ResponseEntity<ApiResponse<Map<String, Object>>> capabilities() {
         return ResponseEntity.ok(ApiResponse.success("timesheet capabilities fetched successfully.", Map.of(
@@ -85,6 +105,14 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return project response
      */
+    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PutMapping("/projects")
     public ResponseEntity<ApiResponse<ProjectView>> upsertProject(
         @Valid @RequestBody final ProjectUpsertRequest request,
@@ -107,6 +135,14 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return project list response
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/projects")
     public ResponseEntity<ApiResponse<List<ProjectView>>> listProjects(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
@@ -127,6 +163,14 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return created entry response
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/entries")
     public ResponseEntity<ApiResponse<TimesheetEntryView>> createEntry(
         @Valid @RequestBody final TimesheetEntryCreateRequest request,
@@ -150,6 +194,14 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return entries response
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/entries")
     public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<TimesheetEntryView>>> listEntries(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
@@ -179,6 +231,14 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return entry response
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/entries/{entryId}")
     public ResponseEntity<ApiResponse<TimesheetEntryView>> getEntry(
         @PathVariable final String entryId,
@@ -199,6 +259,14 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return approved entry response
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/entries/{entryId}/approve")
     public ResponseEntity<ApiResponse<TimesheetEntryView>> approve(
         @PathVariable final String entryId,
@@ -220,6 +288,14 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return rejected entry response
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/entries/{entryId}/reject")
     public ResponseEntity<ApiResponse<TimesheetEntryView>> reject(
         @PathVariable final String entryId,
@@ -243,6 +319,14 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return summary response
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<Map<String, Object>>> summary(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,

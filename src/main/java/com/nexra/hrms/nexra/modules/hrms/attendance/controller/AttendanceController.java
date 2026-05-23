@@ -33,6 +33,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Exposes tenant-scoped attendance and shift management endpoints.
@@ -40,6 +43,7 @@ import org.springframework.validation.annotation.Validated;
  * @author niteshjaitwar
  * @version 1.0
  */
+@Tag(name = "Attendance", description = "Attendance APIs.")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/attendance")
@@ -54,6 +58,14 @@ public class AttendanceController {
      *
      * @return status payload
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> status() {
         return ResponseEntity.ok(ApiResponse.success("attendance service is available.", Map.of(
@@ -66,6 +78,14 @@ public class AttendanceController {
      *
      * @return capabilities payload
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/capabilities")
     public ResponseEntity<ApiResponse<Map<String, Object>>> capabilities() {
         return ResponseEntity.ok(ApiResponse.success("attendance capabilities fetched successfully.", Map.of(
@@ -82,6 +102,14 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return saved shift
      */
+    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PutMapping("/shifts")
     public ResponseEntity<ApiResponse<ShiftView>> upsertShift(
         @Valid @RequestBody final ShiftUpsertRequest request,
@@ -101,6 +129,14 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return shift list
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/shifts")
     public ResponseEntity<ApiResponse<List<ShiftView>>> listShifts(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
@@ -121,6 +157,14 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return attendance record
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/check-in")
     public ResponseEntity<ApiResponse<AttendanceRecordView>> checkIn(
         @Valid @RequestBody final CheckInRequest request,
@@ -137,6 +181,14 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return attendance record
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/check-out")
     public ResponseEntity<ApiResponse<AttendanceRecordView>> checkOut(
         @Valid @RequestBody final CheckOutRequest request,
@@ -156,6 +208,14 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return record list
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/records")
     public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<AttendanceRecordView>>> records(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
@@ -187,6 +247,14 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return summary payload
      */
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<Map<String, Object>>> summary(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,

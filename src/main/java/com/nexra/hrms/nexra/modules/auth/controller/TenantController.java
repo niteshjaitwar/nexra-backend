@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Exposes tenant onboarding API endpoints.
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @version 1.0
  */
 @Slf4j
+@Tag(name = "Authentication", description = "Authentication and identity APIs.")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/tenants")
@@ -34,6 +38,14 @@ public class TenantController {
      * @param request tenant creation payload
      * @return standardized API response with tenant data
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping
     @PreAuthorize("hasRole('PLATFORM_ADMIN')")
     public ResponseEntity<ApiResponse<TenantResponse>> createTenant(@Valid @RequestBody final TenantCreateRequest request) {

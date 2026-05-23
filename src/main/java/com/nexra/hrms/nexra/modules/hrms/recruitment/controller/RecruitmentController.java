@@ -34,6 +34,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Exposes tenant-scoped recruitment APIs for jobs, candidates, and hiring summary.
@@ -41,6 +44,7 @@ import org.springframework.validation.annotation.Validated;
  * @author niteshjaitwar
  * @version 1.0
  */
+@Tag(name = "Recruitment", description = "Recruitment APIs.")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/recruitment")
@@ -49,6 +53,14 @@ public class RecruitmentController {
 
     private final IRecruitmentService recruitmentService;
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> status() {
         return ResponseEntity.ok(ApiResponse.success("recruitment service is available.", Map.of(
@@ -58,6 +70,14 @@ public class RecruitmentController {
         )));
     }
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/capabilities")
     public ResponseEntity<ApiResponse<Map<String, Object>>> capabilities() {
         return ResponseEntity.ok(ApiResponse.success("recruitment capabilities fetched successfully.", Map.of(
@@ -67,6 +87,14 @@ public class RecruitmentController {
         )));
     }
 
+    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PutMapping("/jobs")
     public ResponseEntity<ApiResponse<JobView>> upsertJob(
         @Valid @RequestBody final JobUpsertRequest request,
@@ -80,6 +108,14 @@ public class RecruitmentController {
         ));
     }
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/jobs")
     public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<JobView>>> jobs(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
@@ -97,6 +133,14 @@ public class RecruitmentController {
         ));
     }
 
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/candidates")
     public ResponseEntity<ApiResponse<CandidateView>> createCandidate(
         @Valid @RequestBody final CandidateCreateRequest request,
@@ -110,6 +154,14 @@ public class RecruitmentController {
         ));
     }
 
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/candidates/{candidateId}/stage")
     public ResponseEntity<ApiResponse<CandidateView>> changeStage(
         @PathVariable final String candidateId,
@@ -124,6 +176,14 @@ public class RecruitmentController {
         ));
     }
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/candidates")
     public ResponseEntity<ApiResponse<com.nexra.hrms.nexra.common.api.PageResponse<CandidateView>>> candidates(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,
@@ -142,6 +202,14 @@ public class RecruitmentController {
         ));
     }
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/candidates/{candidateId}/history")
     public ResponseEntity<ApiResponse<List<CandidateStageHistoryView>>> history(
         @PathVariable final String candidateId,
@@ -154,6 +222,14 @@ public class RecruitmentController {
         ));
     }
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<RecruitmentSummaryView>> summary(
         @RequestParam @NotBlank @TenantCode @Size(max = 60) final String tenantCode,

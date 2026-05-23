@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Exposes authentication APIs for registration, login, token refresh, and verification operations.
@@ -28,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @version 1.0
  */
 @Slf4j
+@Tag(name = "Authentication", description = "Authentication and identity APIs.")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
@@ -41,6 +45,14 @@ public class AuthController {
      * @param request registration input payload
      * @return standardized API response with created profile
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserProfileResponse>> register(@Valid @RequestBody final RegisterRequest request) {
         log.info("AuthController() - register() - Register endpoint invoked, tenantCode={}, email={}", request.tenantCode(), maskEmail(request.email()));
@@ -54,6 +66,14 @@ public class AuthController {
      * @param request login input payload
      * @return standardized API response with token pair
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<TokenPairResponse>> login(@Valid @RequestBody final LoginRequest request) {
         log.info("AuthController() - login() - Login endpoint invoked, tenantCode={}, email={}", request.tenantCode(), maskEmail(request.email()));
@@ -67,6 +87,14 @@ public class AuthController {
      * @param request refresh token payload
      * @return standardized API response with rotated token pair
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<TokenPairResponse>> refreshToken(@Valid @RequestBody final RefreshTokenRequest request) {
         log.info("AuthController() - refreshToken() - Refresh endpoint invoked");
@@ -80,6 +108,14 @@ public class AuthController {
      * @param request refresh token payload
      * @return standardized API response
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody final RefreshTokenRequest request) {
         log.info("AuthController() - logout() - Logout endpoint invoked");
@@ -93,6 +129,14 @@ public class AuthController {
      * @param request OTP dispatch payload
      * @return standardized API response with delivery metadata
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/verification/otp/request")
     public ResponseEntity<ApiResponse<VerificationDispatchResponse>> requestOtp(@Valid @RequestBody final VerificationRequest request) {
         log.info("AuthController() - requestOtp() - OTP request endpoint invoked, tenantCode={}, email={}, purpose={}",
@@ -107,6 +151,14 @@ public class AuthController {
      * @param request OTP verification payload
      * @return standardized API response with verification result
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/verification/otp/verify")
     public ResponseEntity<ApiResponse<VerificationResultResponse>> verifyOtp(@Valid @RequestBody final OtpVerificationRequest request) {
         log.info("AuthController() - verifyOtp() - OTP verification endpoint invoked, tenantCode={}, email={}, purpose={}",
@@ -121,6 +173,14 @@ public class AuthController {
      * @param request link dispatch payload
      * @return standardized API response with delivery metadata
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/verification/link/request")
     public ResponseEntity<ApiResponse<VerificationDispatchResponse>> requestLink(@Valid @RequestBody final VerificationRequest request) {
         log.info("AuthController() - requestLink() - Link request endpoint invoked, tenantCode={}, email={}, purpose={}",
@@ -135,6 +195,14 @@ public class AuthController {
      * @param request link verification payload
      * @return standardized API response with verification result
      */
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/verification/link/verify")
     public ResponseEntity<ApiResponse<VerificationResultResponse>> verifyLink(@Valid @RequestBody final LinkVerificationRequest request) {
         log.info("AuthController() - verifyLink() - Link verification endpoint invoked, tenantCode={}, email={}, purpose={}",

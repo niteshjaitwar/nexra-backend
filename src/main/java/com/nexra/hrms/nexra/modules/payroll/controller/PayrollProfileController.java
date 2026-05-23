@@ -30,6 +30,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * Exposes payroll profile APIs for org-level payroll defaults and employee payroll profiles.
@@ -37,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
  * @author niteshjaitwar
  * @version 1.0
  */
+@Tag(name = "Payroll", description = "Payroll APIs.")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/payroll")
@@ -47,6 +51,14 @@ public class PayrollProfileController {
     private final ProfileDirectoryService profileDirectoryService;
     private final TenantBrandingAssetService tenantBrandingAssetService;
 
+    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PutMapping("/organization-profile")
     public ResponseEntity<ApiResponse<OrganizationProfile>> upsertOrganizationProfile(
         @Valid @RequestBody final OrganizationProfileUpsertRequest request,
@@ -61,6 +73,14 @@ public class PayrollProfileController {
         ));
     }
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/organization-profile")
     public ResponseEntity<ApiResponse<OrganizationProfile>> getOrganizationProfile(
         @RequestParam @NotBlank @Size(max = 60) final String tenantCode,
@@ -73,6 +93,14 @@ public class PayrollProfileController {
         ));
     }
 
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/organization-profile/logo")
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadOrganizationLogo(
         @RequestParam @NotBlank @Size(max = 60) final String tenantCode,
@@ -89,6 +117,14 @@ public class PayrollProfileController {
         return ResponseEntity.ok(ApiResponse.success("Organization logo uploaded successfully.", payload));
     }
 
+    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PutMapping("/employees")
     public ResponseEntity<ApiResponse<EmployeeProfile>> upsertEmployeeProfile(
         @Valid @RequestBody final EmployeeProfileUpsertRequest request,
@@ -104,6 +140,14 @@ public class PayrollProfileController {
         ));
     }
 
+    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @PostMapping("/employees")
     public ResponseEntity<ApiResponse<EmployeeProfile>> createEmployeeProfile(
         @Valid @RequestBody final EmployeeProfileUpsertRequest request,
@@ -112,6 +156,14 @@ public class PayrollProfileController {
         return upsertEmployeeProfile(request, httpRequest);
     }
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/employees")
     public ResponseEntity<ApiResponse<List<EmployeeProfile>>> listEmployees(
         @RequestParam @NotBlank @Size(max = 60) final String tenantCode,
@@ -124,6 +176,14 @@ public class PayrollProfileController {
         ));
     }
 
+    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required or invalid token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient privileges for this operation"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Requested resource not found")
+    })
     @GetMapping("/employees/{employeeId}")
     public ResponseEntity<ApiResponse<EmployeeProfile>> getEmployee(
         @PathVariable @NotBlank @Size(max = 64) final String employeeId,
