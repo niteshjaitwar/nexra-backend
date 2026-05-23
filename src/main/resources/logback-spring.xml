@@ -19,6 +19,8 @@
                           "message": "%message",
                           "service": "${appName}",
                           "requestId": "%mdc{requestId:-}",
+                          "traceId": "%mdc{traceId:-}",
+                          "spanId": "%mdc{spanId:-}",
                           "tenant": "%mdc{tenantCode:-}"
                         }
                     </pattern>

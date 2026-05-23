@@ -54,10 +54,28 @@ jobs:
           ignore-unfixed: true
           exit-code: 1
 
+      - name: Build container image for scan
+        run: docker build -t nexra-backend:ci .
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: nexra-backend:ci
+          format: sarif
+          output: trivy-image-results.sarif
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
       - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
+
+      - name: Upload Trivy image SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image-results.sarif
 
       - name: Gitleaks secret scan
         uses: gitleaks/gitleaks-action@v2
@@ -84,3 +102,6 @@ jobs:
 
       - name: Run monolith verification suite
         run: ./mvnw --batch-mode verify
+
+      - name: OWASP dependency-check (CVSS >= 7 fail)
+        run: ./mvnw --batch-mode -DskipTests org.owasp:dependency-check-maven:check

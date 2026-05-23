@@ -8,6 +8,11 @@ metadata:
 spec:
   replicas: 2
   revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: nexra
@@ -16,6 +21,11 @@ spec:
       labels:
         app: nexra
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
       - name: nexra
         image: ghcr.io/example-org/nexra:latest
@@ -29,27 +39,43 @@ spec:
             name: nexra-secrets
         resources:
           requests:
-            cpu: "500m"
-            memory: "768Mi"
+            cpu: "250m"
+            memory: "512Mi"
           limits:
-            cpu: "2"
-            memory: "2Gi"
+            cpu: "1000m"
+            memory: "1Gi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - sh
+              - -c
+              - sleep 5
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         readinessProbe:
           httpGet:
             path: /actuator/health/readiness
             port: 8080
-          initialDelaySeconds: 20
+          initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 3
-          failureThreshold: 6
+          failureThreshold: 3
         livenessProbe:
           httpGet:
             path: /actuator/health/liveness
             port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          periodSeconds: 20
           timeoutSeconds: 3
-          failureThreshold: 6
+          failureThreshold: 3
         startupProbe:
           httpGet:
             path: /actuator/health/readiness
@@ -58,4 +84,6 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 30
-
+      volumes:
+      - name: tmp
+        emptyDir: {}
