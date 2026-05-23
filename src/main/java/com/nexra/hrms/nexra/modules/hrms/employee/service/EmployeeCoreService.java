@@ -32,10 +32,6 @@ public interface EmployeeCoreService {
 
     Employee upsertEmployee(EmployeeUpsertRequest request, AuthenticatedEmployeeCoreUser actor);
 
-    /** @deprecated Use paginated overload instead. */
-    @Deprecated(forRemoval = true)
-    List<Employee> listEmployees(String tenantCode, String departmentId, boolean includeInactive, AuthenticatedEmployeeCoreUser actor);
-
     /** Paginated employee listing with optional department filter. */
     PageResponse<Employee> listEmployees(String tenantCode, String departmentId, boolean includeInactive, AuthenticatedEmployeeCoreUser actor, Pageable pageable);
 

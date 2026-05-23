@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,6 +20,7 @@ public class ProductionReadinessValidator implements ApplicationRunner {
 
     private final Environment environment;
     private final AuthProperties authProperties;
+    private final ResourceLoader resourceLoader;
 
     @Override
     public void run(final ApplicationArguments args) {
@@ -48,6 +51,11 @@ public class ProductionReadinessValidator implements ApplicationRunner {
             "AUTH_OAUTH2_KEY_ALIAS must be configured in prod.");
         assertCondition(!isBlank(authProperties.getOauth2().getKeystoreKeyPassword()),
             "AUTH_OAUTH2_KEY_PASSWORD must be configured in prod.");
+        Resource keystoreResource = resourceLoader.getResource(authProperties.getOauth2().getKeystoreLocation());
+        assertCondition(keystoreResource.exists(),
+            "AUTH_OAUTH2_KEYSTORE_LOCATION must point to an existing keystore resource in prod.");
+        assertCondition(keystoreResource.isReadable(),
+            "AUTH_OAUTH2_KEYSTORE_LOCATION must point to a readable keystore resource in prod.");
         assertCondition(authProperties.getSecurity().getCorsAllowedOrigins() != null
                 && !authProperties.getSecurity().getCorsAllowedOrigins().isEmpty(),
             "app.auth.security.cors-allowed-origins must include at least one production origin.");

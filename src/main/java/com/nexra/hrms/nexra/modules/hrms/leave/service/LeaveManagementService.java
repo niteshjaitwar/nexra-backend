@@ -37,10 +37,6 @@ public interface LeaveManagementService {
 
     LeaveRequestView createLeaveRequest(LeaveRequestCreateRequest request, AuthenticatedLeaveUser actor);
 
-    /** @deprecated Use paginated overload instead. */
-    @Deprecated(forRemoval = true)
-    List<LeaveRequestView> listLeaveRequests(String tenantCode, String employeeId, String status, AuthenticatedLeaveUser actor);
-
     /** Paginated leave request listing. */
     PageResponse<LeaveRequestView> listLeaveRequests(String tenantCode, String employeeId, String status, AuthenticatedLeaveUser actor, Pageable pageable);
 

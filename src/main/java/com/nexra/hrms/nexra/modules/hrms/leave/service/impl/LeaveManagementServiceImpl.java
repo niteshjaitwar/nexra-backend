@@ -27,7 +27,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -222,30 +221,6 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
             tenant, request.employeeId(), leaveTypeCode, request.startDate(), request.endDate());
 
         return toLeaveRequest(leaveRequestRepository.save(entity));
-    }
-
-    @Override
-    public List<LeaveRequestView> listLeaveRequests(
-        final String tenantCode,
-        final String employeeId,
-        final String status,
-        final AuthenticatedLeaveUser actor
-    ) {
-        verifyTenant(actor, tenantCode);
-        String tenant = normTenant(tenantCode);
-        String employeeFilter = blankToNull(employeeId);
-        if (!isAdmin(actor) && employeeFilter != null && !requestingOwnEmployee(actor, employeeFilter)) {
-            throw new LeaveForbiddenException("User cannot view leave requests for another employee");
-        }
-        List<LeaveRequestEntity> requests = employeeFilter == null
-            ? leaveRequestRepository.findByTenantCodeIgnoreCaseOrderByCreatedAtDesc(tenant)
-            : leaveRequestRepository.findByTenantCodeIgnoreCaseAndEmployeeIdOrderByCreatedAtDesc(tenant, employeeFilter);
-        String statusFilter = blankToNullUpper(status);
-        return requests.stream()
-            .filter(req -> statusFilter == null || req.getStatus().equalsIgnoreCase(statusFilter))
-            .sorted(Comparator.comparing(LeaveRequestEntity::getCreatedAt).reversed())
-            .map(this::toLeaveRequest)
-            .toList();
     }
 
     @Override

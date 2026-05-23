@@ -18,7 +18,6 @@ import com.nexra.hrms.nexra.modules.hrms.employee.security.AuthenticatedEmployee
 import com.nexra.hrms.nexra.common.api.PageResponse;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -238,34 +237,6 @@ public class EmployeeCoreServiceImpl implements EmployeeCoreService {
         entity.setUpdatedBy(actor.email());
 
         return toModel(employeeRepository.save(entity));
-    }
-
-    @Override
-    public List<Employee> listEmployees(
-        final String tenantCode,
-        final String departmentId,
-        final boolean includeInactive,
-        final AuthenticatedEmployeeCoreUser actor
-    ) {
-        verifyTenant(actor, tenantCode);
-        String tenant = normTenant(tenantCode);
-        log.debug(
-            "EmployeeCoreServiceImpl - listEmployees - tenantCode={}, departmentId={}, includeInactive={}, actor={}",
-            tenantCode,
-            departmentId,
-            includeInactive,
-            actor.email()
-        );
-        String departmentFilter = blankToNull(departmentId);
-        List<EmployeeEntity> entities = departmentFilter == null
-            ? employeeRepository.findByTenantCodeIgnoreCaseOrderByEmployeeCodeAsc(tenant)
-            : employeeRepository.findByTenantCodeIgnoreCaseAndDepartmentIdOrderByEmployeeCodeAsc(tenant, departmentFilter);
-
-        return entities.stream()
-            .filter(emp -> includeInactive || emp.isActive())
-            .sorted(Comparator.comparing(EmployeeEntity::getEmployeeCode, String.CASE_INSENSITIVE_ORDER))
-            .map(this::toModel)
-            .toList();
     }
 
     @Override
