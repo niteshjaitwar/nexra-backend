@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 import java.util.UUID;
 
 /**
@@ -27,6 +28,7 @@ import java.util.UUID;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @Component("nexraCorrelationIdFilter")
 public class CorrelationIdFilter extends OncePerRequestFilter {
+    private static final Pattern SAFE_REQUEST_ID_PATTERN = Pattern.compile("^[A-Za-z0-9._:-]{1,64}$");
 
     /**
      * MDC key used in every logback pattern across the platform.
@@ -78,6 +80,12 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
      */
     private String resolveRequestId(final HttpServletRequest request) {
         final String value = request.getHeader(HEADER_NAME);
-        return StringUtils.hasText(value) ? value.trim() : UUID.randomUUID().toString();
+        if (StringUtils.hasText(value)) {
+            final String candidate = value.trim();
+            if (SAFE_REQUEST_ID_PATTERN.matcher(candidate).matches()) {
+                return candidate;
+            }
+        }
+        return UUID.randomUUID().toString();
     }
 }

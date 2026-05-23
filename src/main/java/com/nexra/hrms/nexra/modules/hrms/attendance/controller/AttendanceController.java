@@ -58,7 +58,7 @@ public class AttendanceController {
      *
      * @return status payload
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/attendance/status", description = "Processes GET requests for /api/v1/attendance/status.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -78,7 +78,7 @@ public class AttendanceController {
      *
      * @return capabilities payload
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/attendance/capabilities", description = "Processes GET requests for /api/v1/attendance/capabilities.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -102,7 +102,7 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return saved shift
      */
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/attendance/shifts", description = "Processes PUT requests for /api/v1/attendance/shifts.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -129,7 +129,7 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return shift list
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/attendance/shifts", description = "Processes GET requests for /api/v1/attendance/shifts.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -157,7 +157,7 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return attendance record
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/attendance/check-in", description = "Processes POST requests for /api/v1/attendance/check-in.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -181,7 +181,7 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return attendance record
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/attendance/check-out", description = "Processes POST requests for /api/v1/attendance/check-out.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -208,7 +208,7 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return record list
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/attendance/records", description = "Processes GET requests for /api/v1/attendance/records.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -247,7 +247,7 @@ public class AttendanceController {
      * @param httpRequest servlet request
      * @return summary payload
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/attendance/summary", description = "Processes GET requests for /api/v1/attendance/summary.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

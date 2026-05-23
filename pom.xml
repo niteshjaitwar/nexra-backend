@@ -7,13 +7,13 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.3</version>
+        <version>4.0.6</version>
         <relativePath/>
     </parent>
 
     <groupId>com.nexra.hrms</groupId>
     <artifactId>nexra</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>nexra</name>
     <description>Nexra modular monolith application</description>
 
@@ -24,7 +24,11 @@
         <jjwt.version>0.12.6</jjwt.version>
         <lombok.version>1.18.38</lombok.version>
         <springdoc.version>3.0.3</springdoc.version>
+        <swagger-ui.version>5.32.5</swagger-ui.version>
         <bucket4j.version>8.17.0</bucket4j.version>
+        <tomcat.version>11.0.22</tomcat.version>
+        <netty.version>4.2.14.Final</netty.version>
+        <pdfbox.version>3.0.7</pdfbox.version>
         <jacoco.minimum.line.coverage>0.60</jacoco.minimum.line.coverage>
         <jacocoArgLine></jacocoArgLine>
         <maven.compiler.proc>full</maven.compiler.proc>
@@ -113,14 +117,29 @@
             <version>${modelmapper.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.openhtmltopdf</groupId>
+            <groupId>io.github.openhtmltopdf</groupId>
             <artifactId>openhtmltopdf-pdfbox</artifactId>
-            <version>1.0.10</version>
+            <version>1.1.37</version>
         </dependency>
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
-            <version>2.0.31</version>
+            <version>${pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox-io</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>fontbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>xmpbox</artifactId>
+            <version>${pdfbox.version}</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -147,6 +166,11 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>swagger-ui</artifactId>
+            <version>${swagger-ui.version}</version>
         </dependency>
         <dependency>
             <groupId>com.bucket4j</groupId>
@@ -214,6 +238,7 @@
                     </annotationProcessorPaths>
                     <compilerArgs>
                         <arg>-Xlint:all,-processing,-serial</arg>
+                        <arg>-Werror</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>
@@ -308,6 +333,10 @@
                 <configuration>
                     <format>SARIF</format>
                     <failBuildOnCVSS>7.0</failBuildOnCVSS>
+                    <ossindexAnalyzerEnabled>false</ossindexAnalyzerEnabled>
+                    <suppressionFiles>
+                        <suppressionFile>${project.basedir}/dependency-check-suppressions.xml</suppressionFile>
+                    </suppressionFiles>
                 </configuration>
             </plugin>
         </plugins>

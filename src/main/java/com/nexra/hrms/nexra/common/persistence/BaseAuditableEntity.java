@@ -17,9 +17,7 @@ import java.time.Instant;
 /**
  * Canonical auditable base for every JPA entity in the Nexra platform. Adds
  * optimistic locking via {@code @Version}, UTC creation and update timestamps,
- * and user audit fields wired through Spring Data auditing. Modules that
- * previously owned their own auditable base SHOULD migrate to this class in a
- * future refactor wave. All new entities MUST extend this type.
+ * and user audit fields wired through Spring Data auditing.
  *
  * @author niteshjaitwar
  */

@@ -31,7 +31,7 @@ public class PublicBrandingController {
     private final ProfileDirectoryService profileDirectoryService;
     private final TenantBrandingAssetService tenantBrandingAssetService;
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/branding", description = "Processes GET requests for /api/v1/branding.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -50,7 +50,7 @@ public class PublicBrandingController {
         return ResponseEntity.ok(ApiResponse.success("Branding metadata fetched.", payload));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/branding/{tenantCode}", description = "Processes GET requests for /api/v1/branding/{tenantCode}.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -73,7 +73,7 @@ public class PublicBrandingController {
         return ResponseEntity.ok(ApiResponse.success("Tenant branding metadata fetched.", payload));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/branding/assets/{tenantCode}/{filename:.+}", description = "Processes GET requests for /api/v1/branding/assets/{tenantCode}/{filename:.+}.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

@@ -45,7 +45,7 @@ public class AuthController {
      * @param request registration input payload
      * @return standardized API response with created profile
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/auth/register", description = "Processes POST requests for /api/v1/auth/register.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -66,7 +66,7 @@ public class AuthController {
      * @param request login input payload
      * @return standardized API response with token pair
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/auth/login", description = "Processes POST requests for /api/v1/auth/login.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -87,7 +87,7 @@ public class AuthController {
      * @param request refresh token payload
      * @return standardized API response with rotated token pair
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/auth/refresh", description = "Processes POST requests for /api/v1/auth/refresh.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -108,7 +108,7 @@ public class AuthController {
      * @param request refresh token payload
      * @return standardized API response
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/auth/logout", description = "Processes POST requests for /api/v1/auth/logout.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -129,7 +129,7 @@ public class AuthController {
      * @param request OTP dispatch payload
      * @return standardized API response with delivery metadata
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/auth/verification/otp/request", description = "Processes POST requests for /api/v1/auth/verification/otp/request.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -151,7 +151,7 @@ public class AuthController {
      * @param request OTP verification payload
      * @return standardized API response with verification result
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/auth/verification/otp/verify", description = "Processes POST requests for /api/v1/auth/verification/otp/verify.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -173,7 +173,7 @@ public class AuthController {
      * @param request link dispatch payload
      * @return standardized API response with delivery metadata
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/auth/verification/link/request", description = "Processes POST requests for /api/v1/auth/verification/link/request.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -195,7 +195,7 @@ public class AuthController {
      * @param request link verification payload
      * @return standardized API response with verification result
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/auth/verification/link/verify", description = "Processes POST requests for /api/v1/auth/verification/link/verify.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

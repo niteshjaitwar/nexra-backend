@@ -58,7 +58,7 @@ public class LeaveManagementController {
 
     private final LeaveManagementService leaveManagementService;
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/leave/status", description = "Processes GET requests for /api/v1/leave/status.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -75,7 +75,7 @@ public class LeaveManagementController {
         )));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/leave/capabilities", description = "Processes GET requests for /api/v1/leave/capabilities.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -92,7 +92,7 @@ public class LeaveManagementController {
         )));
     }
 
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/leave/leave-types", description = "Processes PUT requests for /api/v1/leave/leave-types.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -111,7 +111,7 @@ public class LeaveManagementController {
         return ResponseEntity.ok(ApiResponse.success("Leave type saved successfully.", leaveManagementService.upsertLeaveType(request, actor)));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/leave/leave-types", description = "Processes GET requests for /api/v1/leave/leave-types.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -132,7 +132,7 @@ public class LeaveManagementController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/leave/holidays", description = "Processes POST requests for /api/v1/leave/holidays.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -148,7 +148,7 @@ public class LeaveManagementController {
         return upsertHoliday(request, httpRequest);
     }
 
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/leave/holidays", description = "Processes PUT requests for /api/v1/leave/holidays.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -167,7 +167,7 @@ public class LeaveManagementController {
         return ResponseEntity.ok(ApiResponse.success("Holiday saved successfully.", leaveManagementService.upsertHoliday(request, actor)));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/leave/holidays", description = "Processes GET requests for /api/v1/leave/holidays.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -188,7 +188,7 @@ public class LeaveManagementController {
         ));
     }
 
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/leave/balances", description = "Processes PUT requests for /api/v1/leave/balances.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -208,7 +208,7 @@ public class LeaveManagementController {
         return ResponseEntity.ok(ApiResponse.success("Leave balance adjusted successfully.", leaveManagementService.adjustBalance(request, actor)));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/leave/balances", description = "Processes GET requests for /api/v1/leave/balances.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -228,7 +228,7 @@ public class LeaveManagementController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/leave/requests", description = "Processes POST requests for /api/v1/leave/requests.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -249,7 +249,7 @@ public class LeaveManagementController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/leave/requests", description = "Processes GET requests for /api/v1/leave/requests.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -275,7 +275,7 @@ public class LeaveManagementController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/leave/requests/{requestId}", description = "Processes GET requests for /api/v1/leave/requests/{requestId}.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -295,7 +295,7 @@ public class LeaveManagementController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/leave/requests/{requestId}/approve", description = "Processes POST requests for /api/v1/leave/requests/{requestId}/approve.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -316,7 +316,7 @@ public class LeaveManagementController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/leave/requests/{requestId}/reject", description = "Processes POST requests for /api/v1/leave/requests/{requestId}/reject.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

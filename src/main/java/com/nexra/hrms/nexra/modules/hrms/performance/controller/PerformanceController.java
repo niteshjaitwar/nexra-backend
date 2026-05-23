@@ -52,7 +52,7 @@ public class PerformanceController {
 
     private final IPerformanceService performanceService;
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/performance/status", description = "Processes GET requests for /api/v1/performance/status.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -69,7 +69,7 @@ public class PerformanceController {
         )));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/performance/capabilities", description = "Processes GET requests for /api/v1/performance/capabilities.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -86,7 +86,7 @@ public class PerformanceController {
         )));
     }
 
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/performance/goals", description = "Processes PUT requests for /api/v1/performance/goals.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -107,7 +107,7 @@ public class PerformanceController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/performance/goals", description = "Processes GET requests for /api/v1/performance/goals.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -133,7 +133,7 @@ public class PerformanceController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/performance/reviews", description = "Processes POST requests for /api/v1/performance/reviews.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -154,7 +154,7 @@ public class PerformanceController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/performance/reviews/{reviewId}/complete", description = "Processes POST requests for /api/v1/performance/reviews/{reviewId}/complete.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -176,7 +176,7 @@ public class PerformanceController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/performance/reviews", description = "Processes GET requests for /api/v1/performance/reviews.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -202,7 +202,7 @@ public class PerformanceController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/performance/summary", description = "Processes GET requests for /api/v1/performance/summary.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

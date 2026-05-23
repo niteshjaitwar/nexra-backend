@@ -20,11 +20,11 @@ RUN addgroup --system nexra && adduser --system --ingroup nexra nexra
 
 COPY --from=build /workspace/target/*.jar /app/nexra.jar
 
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseG1GC -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+UseG1GC -Djava.security.egd=file:/dev/./urandom"
 ENV SPRING_PROFILES_ACTIVE=prod
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 CMD curl --fail --silent --show-error http://127.0.0.1:8080/actuator/health/readiness > /dev/null || exit 1
 USER nexra
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/nexra.jar"]
+ENTRYPOINT ["java", "-jar", "/app/nexra.jar"]

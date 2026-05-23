@@ -49,7 +49,7 @@ public class PayrollController {
     private final PayrollService payrollService;
     private final PayslipDocumentService payslipDocumentService;
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/status", description = "Processes GET requests for /api/v1/payroll/status.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -71,7 +71,7 @@ public class PayrollController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/capabilities", description = "Processes GET requests for /api/v1/payroll/capabilities.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -92,7 +92,7 @@ public class PayrollController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/payroll/generate", description = "Processes POST requests for /api/v1/payroll/generate.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -114,7 +114,7 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Payroll generated successfully.", buildSlipLinksPayload(slip)));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/payroll/generate/from-profile", description = "Processes POST requests for /api/v1/payroll/generate/from-profile.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -136,7 +136,7 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Payroll generated from employee/org profile.", buildSlipLinksPayload(slip)));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/{slipId}", description = "Processes GET requests for /api/v1/payroll/{slipId}.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -155,7 +155,7 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Payroll fetched successfully.", slip));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll", description = "Processes GET requests for /api/v1/payroll.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -176,7 +176,7 @@ public class PayrollController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/payslips/{slipId}/html", description = "Processes GET requests for /api/v1/payroll/payslips/{slipId}/html.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -195,7 +195,7 @@ public class PayrollController {
         return payslipDocumentService.renderPayslipHtml(slip);
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/payslips/{slipId}/pdf", description = "Processes GET requests for /api/v1/payroll/payslips/{slipId}/pdf.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -226,7 +226,7 @@ public class PayrollController {
         return ResponseEntity.ok().headers(headers).body(pdf);
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/dependencies/auth", description = "Processes GET requests for /api/v1/payroll/dependencies/auth.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -278,8 +278,7 @@ public class PayrollController {
     }
 
     private void requirePayrollProductScope(final AuthenticatedPayrollUser actor) {
-        if (actor.products().isEmpty()
-            || actor.products().contains("PAYROLL")
+        if (actor.products().contains("PAYROLL")
             || actor.products().contains("HRMS")) {
             return;
         }

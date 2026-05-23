@@ -38,7 +38,7 @@ public class PlatformAdminController {
      * @param request tenant provisioning payload
      * @return standardized API response with provisioning summary
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/platform/tenants/provision", description = "Processes POST requests for /api/v1/platform/tenants/provision.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

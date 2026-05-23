@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.Test;
@@ -401,14 +402,38 @@ class PayrollIntegrationTest {
             .andExpect(header().string("X-Request-Id", "req-payroll-001"));
     }
 
+    @Test
+    void rejectsMissingPayrollProductScope() throws Exception {
+        String token = bearerToken("ACME", List.of("ROLE_PAYROLL_ADMIN"), null);
+        mockMvc.perform(get("/api/v1/payroll/dependencies/auth")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("User does not have payroll product access"));
+    }
+
+    @Test
+    void rejectsWrongProductScope() throws Exception {
+        String token = bearerToken("ACME", List.of("ROLE_PAYROLL_ADMIN"), Set.of("CRM"));
+        mockMvc.perform(get("/api/v1/payroll/dependencies/auth")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("User does not have payroll product access"));
+    }
+
     private String bearerToken(final String tenantCode, final List<String> roles) {
+        return bearerToken(tenantCode, roles, Set.of("PAYROLL"));
+    }
+
+    private String bearerToken(final String tenantCode, final List<String> roles, final Set<String> products) {
         SecretKey key = Keys.hmacShaKeyFor("01234567890123456789012345678901".getBytes(StandardCharsets.UTF_8));
-        return Jwts.builder()
+        var builder = Jwts.builder()
             .subject("payroll.admin@acme.test")
             .claim("uid", UUID.randomUUID().toString())
             .claim("tenant", tenantCode)
-            .claim("roles", roles)
-            .signWith(key)
-            .compact();
+            .claim("roles", roles);
+        if (products != null) {
+            builder.claim("products", products);
+        }
+        return builder.signWith(key).compact();
     }
 }

@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.encryption.AccessPermission;
 import org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
@@ -70,7 +71,6 @@ public class PayslipDocumentServiceImpl implements PayslipDocumentService {
         String html = renderPayslipPdfHtml(slip);
         try (ByteArrayOutputStream rawPdf = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
-            builder.useFastMode();
             builder.withHtmlContent(html, null);
             builder.toStream(rawPdf);
             builder.run();
@@ -83,7 +83,7 @@ public class PayslipDocumentServiceImpl implements PayslipDocumentService {
 
     private byte[] applyProtection(final byte[] rawPdf) throws IOException {
         try (
-            PDDocument document = PDDocument.load(rawPdf);
+            PDDocument document = Loader.loadPDF(rawPdf);
             ByteArrayOutputStream secured = new ByteArrayOutputStream()
         ) {
             AccessPermission permission = new AccessPermission();
@@ -185,12 +185,18 @@ public class PayslipDocumentServiceImpl implements PayslipDocumentService {
         }
         String tenantCode = relative.substring(0, separator);
         String fileName = relative.substring(separator + 1);
-        Path file = Path.of(payrollProperties.getTenantBranding().getLogoStoragePath())
+        final Path storageRoot = Path.of(payrollProperties.getTenantBranding().getLogoStoragePath())
             .toAbsolutePath()
-            .normalize()
-            .resolve(tenantCode)
-            .resolve(fileName)
             .normalize();
+        final Path tenantDirectory = storageRoot.resolve(tenantCode).normalize();
+        if (!tenantDirectory.startsWith(storageRoot)) {
+            return null;
+        }
+        final Path file = tenantDirectory.resolve(fileName).normalize();
+        // Guard against path traversal in persisted logo paths.
+        if (!file.startsWith(tenantDirectory)) {
+            return null;
+        }
         if (!Files.exists(file) || !Files.isReadable(file)) {
             return null;
         }

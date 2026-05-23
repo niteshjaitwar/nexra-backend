@@ -54,13 +54,13 @@ public class HrmsProductController {
     private final TimesheetEntryRepository timesheetEntryRepository;
     private final PayrollSlipRepository payrollSlipRepository;
 
-    @GetMapping("/modules/{moduleKey}/summary")
     @Operation(summary = "Get HRMS module summary", description = "Returns tenant-scoped operational summary for a supported HRMS module.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Module summary fetched successfully."),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid module key."),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required.")
     })
+    @GetMapping("/modules/{moduleKey}/summary")
     public ResponseEntity<ApiResponse<Map<String, Object>>> moduleSummary(
         @PathVariable @NotBlank @Size(max = 80) final String moduleKey
     ) {
@@ -78,13 +78,13 @@ public class HrmsProductController {
         ), "HRMS module summary fetched successfully."));
     }
 
-    @PostMapping("/workflow")
     @Operation(summary = "Submit HRMS workflow", description = "Accepts tenant-scoped workflow payload for a supported HRMS module.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Workflow accepted."),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid payload or unsupported module key."),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required.")
     })
+    @PostMapping("/workflow")
     public ResponseEntity<ApiResponse<Map<String, Object>>> workflow(@RequestBody final HrmsWorkflowRequest request) {
         final String tenantCode = resolveTenantCode();
         validateModuleKey(request.moduleKey());

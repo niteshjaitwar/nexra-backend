@@ -42,7 +42,7 @@ public class DevDiagnosticsController {
      *
      * @return standardized API response with database counters
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/dev/db-stats", description = "Processes GET requests for /api/v1/dev/db-stats.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

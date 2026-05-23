@@ -144,6 +144,20 @@ class ProductionReadinessValidatorTest {
             .hasMessageContaining("ephemeral-key-enabled must be false in prod");
     }
 
+    @Test
+    @DisplayName("fails when keystore resource is absent in production")
+    void shouldFailWhenKeystoreResourceMissingInProd() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        Resource missingResource = mock(Resource.class);
+        when(resourceLoader.getResource("file:/tmp/auth-keystore.p12")).thenReturn(missingResource);
+        when(missingResource.exists()).thenReturn(false);
+
+        ProductionReadinessValidator validator = new ProductionReadinessValidator(environment, properties, resourceLoader);
+        assertThatThrownBy(() -> validator.run(null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("must point to an existing keystore resource in prod");
+    }
+
     private AuthProperties validProductionProperties() {
         AuthProperties config = new AuthProperties();
 

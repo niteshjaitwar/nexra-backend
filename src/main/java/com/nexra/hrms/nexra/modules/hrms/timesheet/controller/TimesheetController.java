@@ -59,7 +59,7 @@ public class TimesheetController {
      *
      * @return status payload
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/timesheet/status", description = "Processes GET requests for /api/v1/timesheet/status.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -81,7 +81,7 @@ public class TimesheetController {
      *
      * @return capabilities payload
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/timesheet/capabilities", description = "Processes GET requests for /api/v1/timesheet/capabilities.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -105,7 +105,7 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return project response
      */
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/timesheet/projects", description = "Processes PUT requests for /api/v1/timesheet/projects.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -135,7 +135,7 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return project list response
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/timesheet/projects", description = "Processes GET requests for /api/v1/timesheet/projects.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -163,7 +163,7 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return created entry response
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/timesheet/entries", description = "Processes POST requests for /api/v1/timesheet/entries.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -194,7 +194,7 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return entries response
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/timesheet/entries", description = "Processes GET requests for /api/v1/timesheet/entries.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -231,7 +231,7 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return entry response
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/timesheet/entries/{entryId}", description = "Processes GET requests for /api/v1/timesheet/entries/{entryId}.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -259,7 +259,7 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return approved entry response
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/timesheet/entries/{entryId}/approve", description = "Processes POST requests for /api/v1/timesheet/entries/{entryId}/approve.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -288,7 +288,7 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return rejected entry response
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/timesheet/entries/{entryId}/reject", description = "Processes POST requests for /api/v1/timesheet/entries/{entryId}/reject.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -319,7 +319,7 @@ public class TimesheetController {
      * @param httpRequest servlet request
      * @return summary response
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/timesheet/summary", description = "Processes GET requests for /api/v1/timesheet/summary.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

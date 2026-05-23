@@ -38,7 +38,7 @@ public class TenantController {
      * @param request tenant creation payload
      * @return standardized API response with tenant data
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/tenants", description = "Processes POST requests for /api/v1/tenants.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

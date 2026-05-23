@@ -7,6 +7,7 @@ import com.nexra.hrms.nexra.common.exception.NexraUnauthorizedException;
 import com.nexra.hrms.nexra.modules.admin.service.AdminInsightsService;
 import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,11 @@ public class AdminInsightsController {
     private final AdminInsightsService adminInsightsService;
 
     @Operation(summary = "Tenant operational summary", description = "Returns tenant-scoped operational counts across modules.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Admin summary fetched."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin permission missing.")
+    })
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<Map<String, Long>>> summary() {
         final String tenantCode = resolveTenantCode();
@@ -37,6 +43,11 @@ public class AdminInsightsController {
     }
 
     @Operation(summary = "Recent audit events", description = "Returns recent audit events filtered by module when provided.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Audit events fetched."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin permission missing.")
+    })
     @GetMapping("/audit-events")
     public ResponseEntity<ApiResponse<List<AuditEventView>>> auditEvents(
         @RequestParam(required = false) final String module,

@@ -222,7 +222,7 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(remoteUser)) {
             return "user:" + remoteUser;
         }
-        final String forwarded = request.getHeader(X_FORWARDED_FOR);
+        final String forwarded = properties.trustForwardedHeaders() ? request.getHeader(X_FORWARDED_FOR) : null;
         final String ip;
         if (StringUtils.hasText(forwarded)) {
             final int comma = forwarded.indexOf(',');

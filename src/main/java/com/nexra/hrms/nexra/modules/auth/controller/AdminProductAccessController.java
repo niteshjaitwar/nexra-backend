@@ -46,7 +46,7 @@ public class AdminProductAccessController {
      * @param userId target user account identifier
      * @return standardized API response with product access list
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/admin/users/{userId}/products", description = "Processes GET requests for /api/v1/admin/users/{userId}/products.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -73,7 +73,7 @@ public class AdminProductAccessController {
      * @param principal authenticated admin principal
      * @return standardized API response with created access grant
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/admin/users/{userId}/products", description = "Processes POST requests for /api/v1/admin/users/{userId}/products.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -101,7 +101,7 @@ public class AdminProductAccessController {
      * @param product product type to revoke
      * @return standardized API response
      */
-    @Operation(summary = "DELETE endpoint", description = "Handles DELETE requests for this resource.")
+    @Operation(summary = "DELETE /api/v1/admin/users/{userId}/products/{product}", description = "Processes DELETE requests for /api/v1/admin/users/{userId}/products/{product}.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

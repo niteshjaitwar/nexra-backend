@@ -51,7 +51,7 @@ public class PayrollProfileController {
     private final ProfileDirectoryService profileDirectoryService;
     private final TenantBrandingAssetService tenantBrandingAssetService;
 
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/payroll/organization-profile", description = "Processes PUT requests for /api/v1/payroll/organization-profile.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -73,7 +73,7 @@ public class PayrollProfileController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/organization-profile", description = "Processes GET requests for /api/v1/payroll/organization-profile.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -93,7 +93,7 @@ public class PayrollProfileController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/payroll/organization-profile/logo", description = "Processes POST requests for /api/v1/payroll/organization-profile/logo.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -117,7 +117,7 @@ public class PayrollProfileController {
         return ResponseEntity.ok(ApiResponse.success("Organization logo uploaded successfully.", payload));
     }
 
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/payroll/employees", description = "Processes PUT requests for /api/v1/payroll/employees.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -140,7 +140,7 @@ public class PayrollProfileController {
         ));
     }
 
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/payroll/employees", description = "Processes POST requests for /api/v1/payroll/employees.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -156,7 +156,7 @@ public class PayrollProfileController {
         return upsertEmployeeProfile(request, httpRequest);
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/employees", description = "Processes GET requests for /api/v1/payroll/employees.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -176,7 +176,7 @@ public class PayrollProfileController {
         ));
     }
 
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/payroll/employees/{employeeId}", description = "Processes GET requests for /api/v1/payroll/employees/{employeeId}.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -200,6 +200,7 @@ public class PayrollProfileController {
     private AuthenticatedPayrollUser currentUser(final HttpServletRequest request) {
         Object value = request.getAttribute(PayrollAuthFilter.ATTR_AUTH_USER);
         if (value instanceof AuthenticatedPayrollUser user) {
+            requirePayrollProductScope(user);
             return user;
         }
         throw new PayrollUnauthorizedException("Missing authenticated payroll user");
@@ -221,5 +222,13 @@ public class PayrollProfileController {
             return;
         }
         throw new PayrollForbiddenException("Tenant mismatch for payroll action");
+    }
+
+    private void requirePayrollProductScope(final AuthenticatedPayrollUser actor) {
+        if (actor.products().contains("PAYROLL")
+            || actor.products().contains("HRMS")) {
+            return;
+        }
+        throw new PayrollForbiddenException("User does not have payroll product access");
     }
 }

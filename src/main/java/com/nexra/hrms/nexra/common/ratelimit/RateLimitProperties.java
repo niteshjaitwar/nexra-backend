@@ -15,6 +15,7 @@ import java.util.List;
  * @param capacity        maximum number of requests allowed in the burst window.
  * @param refillPeriod    duration over which the bucket refills to capacity.
  * @param distributedEnabled enables Redis-backed shared limiting for multi-instance deployments.
+ * @param trustForwardedHeaders whether X-Forwarded-For should be trusted for client IP resolution.
  * @param redisKeyPrefix  namespace prefix for Redis rate-limit keys.
  * @param excludedPaths   ant style path patterns excluded from rate limiting.
  * @author niteshjaitwar
@@ -25,6 +26,7 @@ public record RateLimitProperties(
         long capacity,
         Duration refillPeriod,
         boolean distributedEnabled,
+        boolean trustForwardedHeaders,
         String redisKeyPrefix,
         List<String> excludedPaths) {
 
@@ -36,6 +38,7 @@ public record RateLimitProperties(
      * @param capacity      bucket capacity, defaulting to 120 when null.
      * @param refillPeriod  refill duration, defaulting to one minute when null.
      * @param distributedEnabled distributed mode flag, defaulting to false when null.
+     * @param trustForwardedHeaders whether forwarded headers are trusted, defaulting to false.
      * @param redisKeyPrefix redis key prefix, defaulting to {@code nexra:ratelimit}.
      * @param excludedPaths excluded path patterns, defaulting to actuator and OpenAPI endpoints.
      */

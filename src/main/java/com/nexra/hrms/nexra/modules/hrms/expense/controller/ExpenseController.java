@@ -54,7 +54,7 @@ public class ExpenseController {
      *
      * @return status payload
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/expense/status", description = "Processes GET requests for /api/v1/expense/status.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -76,7 +76,7 @@ public class ExpenseController {
      *
      * @return capabilities payload
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/expense/capabilities", description = "Processes GET requests for /api/v1/expense/capabilities.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -100,7 +100,7 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return category response
      */
-    @Operation(summary = "PUT endpoint", description = "Handles PUT requests for this resource.")
+    @Operation(summary = "PUT /api/v1/expense/categories", description = "Processes PUT requests for /api/v1/expense/categories.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -128,7 +128,7 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return categories response
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/expense/categories", description = "Processes GET requests for /api/v1/expense/categories.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -156,7 +156,7 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/expense/claims", description = "Processes POST requests for /api/v1/expense/claims.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -186,7 +186,7 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claims response
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/expense/claims", description = "Processes GET requests for /api/v1/expense/claims.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -221,7 +221,7 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/expense/claims/{claimId}", description = "Processes GET requests for /api/v1/expense/claims/{claimId}.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -249,7 +249,7 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/expense/claims/{claimId}/approve", description = "Processes POST requests for /api/v1/expense/claims/{claimId}/approve.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -278,7 +278,7 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/expense/claims/{claimId}/reject", description = "Processes POST requests for /api/v1/expense/claims/{claimId}/reject.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -307,7 +307,7 @@ public class ExpenseController {
      * @param httpRequest servlet request
      * @return claim response
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/expense/claims/{claimId}/reimburse", description = "Processes POST requests for /api/v1/expense/claims/{claimId}/reimburse.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

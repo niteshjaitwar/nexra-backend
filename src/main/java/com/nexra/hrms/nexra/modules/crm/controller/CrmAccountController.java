@@ -11,6 +11,7 @@ import com.nexra.hrms.nexra.modules.crm.dto.request.CrmAccountUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.model.CrmAccount;
 import com.nexra.hrms.nexra.modules.crm.service.CrmAccountService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,18 +39,36 @@ public class CrmAccountController {
     private final CrmProperties properties;
 
     @Operation(summary = "Create CRM account")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "CRM account created."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid account payload."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access missing.")
+    })
     @PostMapping
     public ResponseEntity<ApiResponse<CrmAccount>> create(@Valid @RequestBody final CrmAccountCreateRequest request) {
         return ResponseEntity.status(201).body(ApiResponse.created(service.create(resolveTenantCode(), request), "CRM account created successfully."));
     }
 
     @Operation(summary = "Get CRM account")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "CRM account fetched."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access missing."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM account not found.")
+    })
     @GetMapping("/{accountId}")
     public ResponseEntity<ApiResponse<CrmAccount>> getById(@PathVariable final String accountId) {
         return ResponseEntity.ok(ApiResponse.ok(service.findById(resolveTenantCode(), accountId), "CRM account fetched successfully."));
     }
 
     @Operation(summary = "List CRM accounts")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "CRM accounts listed."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access missing."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "Invalid pagination parameters.")
+    })
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<CrmAccount>>> list(
         @RequestParam(defaultValue = "0") final int page,
@@ -59,6 +78,13 @@ public class CrmAccountController {
     }
 
     @Operation(summary = "Update CRM account")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "CRM account updated."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid account payload."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access missing."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM account not found.")
+    })
     @PutMapping("/{accountId}")
     public ResponseEntity<ApiResponse<CrmAccount>> update(
         @PathVariable final String accountId,
@@ -68,6 +94,12 @@ public class CrmAccountController {
     }
 
     @Operation(summary = "Delete CRM account")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "CRM account deleted."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access missing."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM account not found.")
+    })
     @DeleteMapping("/{accountId}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable final String accountId) {
         service.delete(resolveTenantCode(), accountId);

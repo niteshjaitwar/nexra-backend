@@ -40,7 +40,7 @@ public class OAuthClientController {
      * @param request OAuth client registration payload
      * @return standardized API response with created client metadata
      */
-    @Operation(summary = "POST endpoint", description = "Handles POST requests for this resource.")
+    @Operation(summary = "POST /api/v1/oauth-clients", description = "Processes POST requests for /api/v1/oauth-clients.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),
@@ -63,7 +63,7 @@ public class OAuthClientController {
      *
      * @return standardized API response with registered client metadata
      */
-    @Operation(summary = "GET endpoint", description = "Handles GET requests for this resource.")
+    @Operation(summary = "GET /api/v1/oauth-clients", description = "Processes GET requests for /api/v1/oauth-clients.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request processed successfully"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid request payload or parameters"),

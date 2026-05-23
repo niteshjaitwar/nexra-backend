@@ -47,7 +47,6 @@ public class CrmProductController {
     private final CrmDealRepository crmDealRepository;
     private final CrmProperties crmProperties;
 
-    @GetMapping("/modules/{moduleKey}/pipeline")
     @Operation(summary = "Get CRM pipeline snapshot", description = "Returns tenant-scoped CRM pipeline summary for a supported CRM module.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Pipeline snapshot fetched successfully."),
@@ -55,6 +54,7 @@ public class CrmProductController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required."),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access is missing.")
     })
+    @GetMapping("/modules/{moduleKey}/pipeline")
     public ResponseEntity<ApiResponse<Map<String, Object>>> pipelineSnapshot(
         @PathVariable @NotBlank @Size(max = 80) final String moduleKey
     ) {

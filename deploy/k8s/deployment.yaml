@@ -28,7 +28,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: nexra
-        image: ghcr.io/example-org/nexra:latest
+        image: ghcr.io/niteshjaitwar/nexra-backend:1.0.0
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
