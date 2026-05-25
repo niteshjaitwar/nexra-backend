@@ -276,14 +276,14 @@ public class AttendanceServiceImpl implements AttendanceService {
             .reduce(BigDecimal.ZERO, BigDecimal::add)
             .setScale(2, RoundingMode.HALF_UP);
 
-        return Map.of(
-            "tenantCode", normTenant(tenantCode),
-            "employeeId", blankToNull(employeeId),
-            "recordCount", records.size(),
-            "presentDays", presentDays,
-            "checkedInOnlyDays", checkedInOnlyDays,
-            "totalHours", totalHours
-        );
+        Map<String, Object> summary = new java.util.LinkedHashMap<>();
+        summary.put("tenantCode", normTenant(tenantCode));
+        summary.put("employeeId", blankToNull(employeeId));
+        summary.put("recordCount", records.size());
+        summary.put("presentDays", presentDays);
+        summary.put("checkedInOnlyDays", checkedInOnlyDays);
+        summary.put("totalHours", totalHours);
+        return summary;
     }
 
     private ShiftView toModel(final ShiftEntity entity) {
