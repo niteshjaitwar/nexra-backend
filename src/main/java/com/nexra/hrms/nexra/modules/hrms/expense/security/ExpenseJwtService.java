@@ -18,6 +18,10 @@ public class ExpenseJwtService {
     private final ExpenseProperties properties;
     public AuthenticatedExpenseUser parseBearerToken(final String token) {
         Claims claims = Jwts.parser().verifyWith(signingKey()).build().parseSignedClaims(token).getPayload();
+        @SuppressWarnings("unchecked") List<String> products = claims.get("products", List.class);
+        if (products == null || !products.contains("HRMS")) {
+            throw new io.jsonwebtoken.security.SignatureException("User does not have HRMS product access.");
+        }
         @SuppressWarnings("unchecked") List<String> roles = claims.get("roles", List.class);
         return new AuthenticatedExpenseUser(UUID.fromString(claims.get("uid", String.class)), claims.getSubject(),
             claims.get("tenant", String.class), roles == null ? Set.of() : Set.copyOf(roles));

@@ -32,6 +32,12 @@ public class LeaveJwtService {
             .getPayload();
 
         @SuppressWarnings("unchecked")
+        List<String> products = claims.get("products", List.class);
+        if (products == null || !products.contains("HRMS")) {
+            throw new io.jsonwebtoken.security.SignatureException("User does not have HRMS product access.");
+        }
+
+        @SuppressWarnings("unchecked")
         List<String> roles = claims.get("roles", List.class);
 
         return new AuthenticatedLeaveUser(

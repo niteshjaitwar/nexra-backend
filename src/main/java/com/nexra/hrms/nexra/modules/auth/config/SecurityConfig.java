@@ -94,7 +94,8 @@ public class SecurityConfig {
                 "/api/v1/platform/**",
                 "/api/v1/dev/**",
                 "/api/v1/tenants/**",
-                "/api/v1/oauth-clients/**"
+                "/api/v1/oauth-clients/**",
+                "/api/v1/hrms/**"
             )
             .csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())
@@ -120,6 +121,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/tenants/**").hasRole("PLATFORM_ADMIN")
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("TENANT_ADMIN", "PLATFORM_ADMIN")
                 .requestMatchers("/api/v1/platform/**").hasRole("PLATFORM_ADMIN")
+                .requestMatchers("/api/v1/hrms/**").authenticated()
                 .anyRequest().authenticated()
             );
         SecurityHeadersCustomizer.apply(http);

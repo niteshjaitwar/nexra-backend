@@ -26,6 +26,8 @@ public class AuthProperties {
     @Valid
     private Security security = new Security();
     @Valid
+    private Cookie cookie = new Cookie();
+    @Valid
     private Oauth2 oauth2 = new Oauth2();
     @Valid
     private Mail mail = new Mail();
@@ -73,7 +75,27 @@ public class AuthProperties {
         @Min(1)
         private int otpWindowMinutes;
         private boolean redisEnabled;
-        private List<String> corsAllowedOrigins = List.of("http://localhost:4200", "http://127.0.0.1:4200");
+        private List<String> corsAllowedOrigins = List.of(
+            "http://localhost:4200",
+            "http://127.0.0.1:4200",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173"
+        );
+    }
+
+    /**
+     * Encapsulates browser cookie settings for refresh token transport.
+     *
+     * @author niteshjaitwar
+     * @version 1.0
+     */
+    @Getter
+    @Setter
+    public static class Cookie {
+        private String refreshTokenName = "nexra_refresh_token";
+        private String sameSite = "Lax";
+        private boolean secure = false;
+        private String path = "/";
     }
 
     /**
