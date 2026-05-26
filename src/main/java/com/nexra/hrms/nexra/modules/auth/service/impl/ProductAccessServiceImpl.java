@@ -5,6 +5,7 @@ import com.nexra.hrms.nexra.modules.auth.dto.response.ProductAccessResponse;
 import com.nexra.hrms.nexra.modules.auth.entity.UserAccount;
 import com.nexra.hrms.nexra.modules.auth.entity.UserProductAccess;
 import com.nexra.hrms.nexra.modules.auth.enums.ProductType;
+import com.nexra.hrms.nexra.modules.auth.enums.ProductRole;
 import com.nexra.hrms.nexra.modules.auth.exception.BusinessException;
 import com.nexra.hrms.nexra.modules.auth.exception.ResourceNotFoundException;
 import com.nexra.hrms.nexra.modules.auth.repository.UserAccountRepository;
@@ -87,6 +88,7 @@ public class ProductAccessServiceImpl implements ProductAccessService {
                 "Duplicate product access grant rejected for product=" + request.product().name());
             throw new BusinessException("User already has access to product: " + request.product().name());
         }
+        assertRoleCompatibleWithProduct(request, user);
 
         UserProductAccess access = new UserProductAccess();
         access.setUser(user);
@@ -166,5 +168,25 @@ public class ProductAccessServiceImpl implements ProductAccessService {
 
     private boolean hasRole(final JwtPrincipal actor, final String role) {
         return actor.roles() != null && actor.roles().contains(role);
+    }
+
+    private void assertRoleCompatibleWithProduct(final GrantProductAccessRequest request, final UserAccount user) {
+        if (isRoleCompatibleWithProduct(request.product(), request.productRole())) {
+            return;
+        }
+        securityAuditService.record("PRODUCT_ACCESS_GRANT", user.getTenant().getCode(), user.getEmail(), "FAILURE",
+            "Product access grant rejected because role=" + request.productRole().name()
+                + " is incompatible with product=" + request.product().name());
+        throw new BusinessException("Product role " + request.productRole().name()
+            + " is not valid for product " + request.product().name());
+    }
+
+    private boolean isRoleCompatibleWithProduct(final ProductType product, final ProductRole role) {
+        return switch (role) {
+            case TENANT_ADMIN -> true;
+            case EMPLOYEE, HR_MANAGER, PAYROLL_ADMIN, FINANCE_ADMIN, RECRUITMENT_ADMIN, PERFORMANCE_ADMIN,
+                ONBOARDING_ADMIN, DEPARTMENT_HEAD -> product == ProductType.HRMS;
+            case SALES_REP, ACCOUNT_MANAGER, SALES_MANAGER, SUPPORT_AGENT -> product == ProductType.CRM;
+        };
     }
 }

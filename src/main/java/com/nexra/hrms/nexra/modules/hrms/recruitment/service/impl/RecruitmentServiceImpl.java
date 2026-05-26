@@ -1,6 +1,8 @@
 package com.nexra.hrms.nexra.modules.hrms.recruitment.service.impl;
 
 import com.nexra.hrms.nexra.common.api.PageResponse;
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.dto.request.CandidateCreateRequest;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.dto.request.CandidateStageChangeRequest;
 import com.nexra.hrms.nexra.modules.hrms.recruitment.dto.request.JobUpsertRequest;
@@ -44,6 +46,7 @@ public class RecruitmentServiceImpl implements IRecruitmentService {
     private final JobRepository jobRepository;
     private final CandidateRepository candidateRepository;
     private final CandidateStageHistoryRepository historyRepository;
+    private final AuditEventService auditEventService;
 
     @Override
     @Transactional
@@ -68,7 +71,9 @@ public class RecruitmentServiceImpl implements IRecruitmentService {
         entity.setStatus(trim(request.status()).toUpperCase());
         entity.setUpdatedBy(actorName(actor));
         log.info("RecruitmentServiceImpl - upsertJob - tenantCode={}, isNew={}", request.tenantCode(), isNewJob);
-        return toJobView(jobRepository.save(entity));
+        JobEntity saved = jobRepository.save(entity);
+        recordAudit(saved.getTenantCode(), isNewJob ? "CREATE_JOB" : "UPDATE_JOB", actor, "RECRUITMENT_JOB", saved.getJobId());
+        return toJobView(saved);
     }
 
     @Override
@@ -112,6 +117,7 @@ public class RecruitmentServiceImpl implements IRecruitmentService {
 
         CandidateEntity saved = candidateRepository.save(entity);
         addHistory(tenant, saved.getCandidateId(), null, "APPLIED", "Candidate created", actor);
+        recordAudit(saved.getTenantCode(), "CREATE_CANDIDATE", actor, "CANDIDATE", saved.getCandidateId());
         log.info("RecruitmentServiceImpl - createCandidate - tenantCode={}, jobId={}", tenant, request.jobId());
         return toCandidateView(saved);
     }
@@ -137,6 +143,7 @@ public class RecruitmentServiceImpl implements IRecruitmentService {
         entity.setUpdatedBy(actorName(actor));
         CandidateEntity saved = candidateRepository.save(entity);
         addHistory(tenant, candidateId, fromStage, toStage, blankToNull(request.comment()), actor);
+        recordAudit(saved.getTenantCode(), "CHANGE_CANDIDATE_STAGE", actor, "CANDIDATE", saved.getCandidateId());
         log.info("RecruitmentServiceImpl - changeStage - tenantCode={}, candidateId={}, from={}, to={}", tenant, candidateId, fromStage, toStage);
         return toCandidateView(saved);
     }
@@ -277,6 +284,18 @@ public class RecruitmentServiceImpl implements IRecruitmentService {
 
     private String actorName(final AuthenticatedRecruitmentUser actor) {
         return actor.email() != null ? actor.email() : String.valueOf(actor.userId());
+    }
+
+    private void recordAudit(
+        final String tenantCode,
+        final String action,
+        final AuthenticatedRecruitmentUser actor,
+        final String targetType,
+        final String targetId
+    ) {
+        auditEventService.record(AuditEventRecord.of(tenantCode, "RECRUITMENT", action, "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget(targetType, targetId));
     }
 
     private String normalizeTenant(final String value) {

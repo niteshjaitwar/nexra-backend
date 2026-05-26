@@ -96,7 +96,7 @@ class JwtServiceImplTest {
         crm.setProductRole(ProductRole.SALES_MANAGER);
         UserProductAccess hrms = new UserProductAccess();
         hrms.setProduct(ProductType.HRMS);
-        hrms.setProductRole(ProductRole.TENANT_ADMIN);
+        hrms.setProductRole(ProductRole.FINANCE_ADMIN);
         when(userProductAccessRepository.findByUser(user)).thenReturn(List.of(crm, hrms));
 
         JwtPrincipal principal = jwtService.parsePrincipal(jwtService.generateAccessToken(user));
@@ -104,7 +104,7 @@ class JwtServiceImplTest {
         assertThat(principal.products()).containsExactlyInAnyOrder("CRM", "HRMS");
         assertThat(principal.productRoles())
             .containsEntry("CRM", "SALES_MANAGER")
-            .containsEntry("HRMS", "TENANT_ADMIN");
-        assertThat(principal.roles()).contains("ROLE_CRM_ADMIN", "ROLE_TENANT_ADMIN");
+            .containsEntry("HRMS", "FINANCE_ADMIN");
+        assertThat(principal.roles()).contains("ROLE_CRM_ADMIN", "ROLE_FINANCE_ADMIN", "ROLE_TENANT_ADMIN");
     }
 }

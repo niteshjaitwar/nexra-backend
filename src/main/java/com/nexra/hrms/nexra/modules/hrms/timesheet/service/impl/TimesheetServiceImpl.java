@@ -1,5 +1,7 @@
 package com.nexra.hrms.nexra.modules.hrms.timesheet.service.impl;
 
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.hrms.timesheet.dto.request.ProjectUpsertRequest;
 import com.nexra.hrms.nexra.modules.hrms.timesheet.dto.request.TimesheetDecisionRequest;
 import com.nexra.hrms.nexra.modules.hrms.timesheet.dto.request.TimesheetEntryCreateRequest;
@@ -42,6 +44,7 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     private final ProjectRepository projectRepository;
     private final TimesheetEntryRepository entryRepository;
+    private final AuditEventService auditEventService;
 
     /**
      * Creates or updates a project.
@@ -72,7 +75,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         entity.setBillable(request.billable());
         entity.setActive(request.active() == null || request.active());
         entity.setUpdatedBy(actor.email());
-        return toProject(projectRepository.save(entity));
+        ProjectEntity saved = projectRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "UPSERT_PROJECT", actor, "PROJECT", saved.getProjectCode());
+        return toProject(saved);
     }
 
     /**
@@ -128,7 +133,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         entity.setNotes(blankToNull(request.notes()));
         entity.setCreatedBy(actor.email());
         entity.setUpdatedBy(actor.email());
-        return toEntry(entryRepository.save(entity));
+        TimesheetEntryEntity saved = entryRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "CREATE_TIMESHEET_ENTRY", actor, "TIMESHEET_ENTRY", saved.getId());
+        return toEntry(saved);
     }
 
     /**
@@ -300,7 +307,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         entry.setUpdatedBy(actor.email());
         log.info("TimesheetServiceImpl - decide - tenantCode={}, entryId={}, action={}, approver={}",
             request.tenantCode(), entryId, approve ? "APPROVE" : "REJECT", actor.email());
-        return toEntry(entryRepository.save(entry));
+        TimesheetEntryEntity saved = entryRepository.save(entry);
+        recordAudit(saved.getTenantCode(), approve ? "APPROVE_TIMESHEET_ENTRY" : "REJECT_TIMESHEET_ENTRY", actor, "TIMESHEET_ENTRY", saved.getId());
+        return toEntry(saved);
     }
 
     private ProjectView toProject(final ProjectEntity entity) {
@@ -365,6 +374,18 @@ public class TimesheetServiceImpl implements TimesheetService {
         if (!actor.tenantCode().equalsIgnoreCase(tenantCode)) {
             throw new TimesheetBusinessException("Token tenant does not match requested tenant");
         }
+    }
+
+    private void recordAudit(
+        final String tenantCode,
+        final String action,
+        final AuthenticatedTimesheetUser actor,
+        final String targetType,
+        final String targetId
+    ) {
+        auditEventService.record(AuditEventRecord.of(tenantCode, "TIMESHEET", action, "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget(targetType, targetId));
     }
 
     private BigDecimal amount(final BigDecimal value) {

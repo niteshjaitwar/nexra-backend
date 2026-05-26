@@ -1,5 +1,7 @@
 package com.nexra.hrms.nexra.modules.hrms.leave.service.impl;
 
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.hrms.leave.dto.request.HolidayUpsertRequest;
 import com.nexra.hrms.nexra.modules.hrms.leave.dto.request.LeaveBalanceAdjustRequest;
 import com.nexra.hrms.nexra.modules.hrms.leave.dto.request.LeaveDecisionRequest;
@@ -54,6 +56,7 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
     private final LeaveBalanceRepository leaveBalanceRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final EmployeeRepository employeeRepository;
+    private final AuditEventService auditEventService;
 
     @Override
     @Transactional
@@ -76,7 +79,9 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
         entity.setDefaultAnnualQuota(amount(request.defaultAnnualQuota()));
         entity.setActive(request.active() == null || request.active());
         entity.setUpdatedBy(actor.email());
-        return toLeaveType(leaveTypeRepository.save(entity));
+        LeaveTypeEntity saved = leaveTypeRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "UPSERT_LEAVE_TYPE", actor, "LEAVE_TYPE", saved.getCode());
+        return toLeaveType(saved);
     }
 
     @Override
@@ -116,7 +121,9 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
         entity.setLocationCode(location);
         entity.setActive(request.active() == null || request.active());
         entity.setUpdatedBy(actor.email());
-        return toHoliday(holidayRepository.save(entity));
+        HolidayEntity saved = holidayRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "UPSERT_HOLIDAY", actor, "HOLIDAY", saved.getId());
+        return toHoliday(saved);
     }
 
     @Override
@@ -168,7 +175,9 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
         entity.setUpdatedBy(actor.email());
         log.info("LeaveManagementServiceImpl - adjustBalance - tenantCode={}, employeeId={}, leaveTypeCode={}",
             tenant, request.employeeId(), leaveTypeCode);
-        return toLeaveBalance(leaveBalanceRepository.save(entity));
+        LeaveBalanceEntity saved = leaveBalanceRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "ADJUST_LEAVE_BALANCE", actor, "LEAVE_BALANCE", saved.getId());
+        return toLeaveBalance(saved);
     }
 
     @Override
@@ -220,7 +229,9 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
         log.info("LeaveManagementServiceImpl - createLeaveRequest - tenantCode={}, employeeId={}, leaveTypeCode={}, startDate={}, endDate={}",
             tenant, request.employeeId(), leaveTypeCode, request.startDate(), request.endDate());
 
-        return toLeaveRequest(leaveRequestRepository.save(entity));
+        LeaveRequestEntity saved = leaveRequestRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "CREATE_LEAVE_REQUEST", actor, "LEAVE_REQUEST", saved.getId());
+        return toLeaveRequest(saved);
     }
 
     @Override
@@ -323,7 +334,9 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
         entity.setUpdatedBy(actor.email());
         log.info("LeaveManagementServiceImpl - decideLeaveRequest - tenantCode={}, requestId={}, action={}, approver={}",
             tenant, requestId, approve ? "APPROVE" : "REJECT", actor.email());
-        return toLeaveRequest(leaveRequestRepository.save(entity));
+        LeaveRequestEntity saved = leaveRequestRepository.save(entity);
+        recordAudit(saved.getTenantCode(), approve ? "APPROVE_LEAVE_REQUEST" : "REJECT_LEAVE_REQUEST", actor, "LEAVE_REQUEST", saved.getId());
+        return toLeaveRequest(saved);
     }
 
     private void ensureLeaveTypeExists(final String tenant, final String leaveTypeCode) {
@@ -355,6 +368,18 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
             actor.tenantCode(),
             actor.userId().toString()
         ).map(emp -> emp.getId().equalsIgnoreCase(employeeId)).orElse(false);
+    }
+
+    private void recordAudit(
+        final String tenantCode,
+        final String action,
+        final AuthenticatedLeaveUser actor,
+        final String targetType,
+        final String targetId
+    ) {
+        auditEventService.record(AuditEventRecord.of(tenantCode, "LEAVE", action, "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget(targetType, targetId));
     }
 
     private void verifyTenant(final AuthenticatedLeaveUser actor, final String tenantCode) {

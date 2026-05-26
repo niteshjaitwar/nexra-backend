@@ -4,6 +4,8 @@ import com.nexra.hrms.nexra.modules.hrms.expense.dto.request.ExpenseCategoryUpse
 import com.nexra.hrms.nexra.modules.hrms.expense.dto.request.ExpenseClaimCreateRequest;
 import com.nexra.hrms.nexra.modules.hrms.expense.dto.request.ExpenseClaimItemRequest;
 import com.nexra.hrms.nexra.modules.hrms.expense.dto.request.ExpenseDecisionRequest;
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.hrms.expense.entity.ExpenseCategoryEntity;
 import com.nexra.hrms.nexra.modules.hrms.expense.entity.ExpenseClaimEntity;
 import com.nexra.hrms.nexra.modules.hrms.expense.entity.ExpenseClaimItemEntity;
@@ -44,6 +46,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final ExpenseCategoryRepository categoryRepository;
     private final ExpenseClaimRepository claimRepository;
     private final ExpenseClaimItemRepository claimItemRepository;
+    private final AuditEventService auditEventService;
 
     /**
      * Creates or updates an expense category.
@@ -74,7 +77,11 @@ public class ExpenseServiceImpl implements ExpenseService {
         entity.setRequiresReceipt(request.requiresReceipt());
         entity.setActive(request.active() == null || request.active());
         entity.setUpdatedBy(actor.email());
-        return toCategoryModel(categoryRepository.save(entity));
+        ExpenseCategoryEntity saved = categoryRepository.save(entity);
+        auditEventService.record(AuditEventRecord.of(tenant, "EXPENSE", "UPSERT_CATEGORY", "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget("EXPENSE_CATEGORY", saved.getCode()));
+        return toCategoryModel(saved);
     }
 
     /**
@@ -159,6 +166,9 @@ public class ExpenseServiceImpl implements ExpenseService {
             entity.setUpdatedBy(actor.email());
             claimItemRepository.save(entity);
         }
+        auditEventService.record(AuditEventRecord.of(tenant, "EXPENSE", "CREATE_CLAIM", "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget("EXPENSE_CLAIM", savedClaim.getId()));
         return toClaimModel(savedClaim);
     }
 
@@ -293,7 +303,11 @@ public class ExpenseServiceImpl implements ExpenseService {
         claim.setReimbursedAt(Instant.now());
         claim.setUpdatedBy(actor.email());
         log.info("ExpenseServiceImpl - markReimbursed - tenantCode={}, claimId={}, actor={}", tenantCode, claimId, actor.email());
-        return toClaimModel(claimRepository.save(claim));
+        ExpenseClaimEntity saved = claimRepository.save(claim);
+        auditEventService.record(AuditEventRecord.of(saved.getTenantCode(), "EXPENSE", "REIMBURSE_CLAIM", "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget("EXPENSE_CLAIM", saved.getId()));
+        return toClaimModel(saved);
     }
 
     private ExpenseClaimView decide(
@@ -316,7 +330,11 @@ public class ExpenseServiceImpl implements ExpenseService {
         claim.setUpdatedBy(actor.email());
         log.info("ExpenseServiceImpl - decide - tenantCode={}, claimId={}, action={}, approver={}",
             request.tenantCode(), claimId, approve ? "APPROVE" : "REJECT", actor.email());
-        return toClaimModel(claimRepository.save(claim));
+        ExpenseClaimEntity saved = claimRepository.save(claim);
+        auditEventService.record(AuditEventRecord.of(saved.getTenantCode(), "EXPENSE", approve ? "APPROVE_CLAIM" : "REJECT_CLAIM", "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget("EXPENSE_CLAIM", saved.getId()));
+        return toClaimModel(saved);
     }
 
     private ExpenseCategoryView toCategoryModel(final ExpenseCategoryEntity entity) {

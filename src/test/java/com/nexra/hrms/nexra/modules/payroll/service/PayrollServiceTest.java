@@ -1,5 +1,6 @@
 package com.nexra.hrms.nexra.modules.payroll.service;
 
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.payroll.dto.PayrollGenerationRequest;
 import com.nexra.hrms.nexra.modules.payroll.dto.PayrollLineItemRequest;
 import com.nexra.hrms.nexra.modules.payroll.entity.PayrollSlipEntity;
@@ -34,13 +35,15 @@ class PayrollServiceTest {
         };
         ProfileDirectoryService profileDirectoryService = mock(ProfileDirectoryService.class);
         PayrollSlipRepository payrollSlipRepository = mock(PayrollSlipRepository.class);
+        AuditEventService auditEventService = mock(AuditEventService.class);
         when(payrollSlipRepository.save(any(PayrollSlipEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         PayrollService payrollService = new PayrollServiceImpl(
             new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules(),
             authReferenceClient,
             profileDirectoryService,
-            payrollSlipRepository
+            payrollSlipRepository,
+            auditEventService
         );
         PayrollGenerationRequest request = new PayrollGenerationRequest(
             "EMP-1",

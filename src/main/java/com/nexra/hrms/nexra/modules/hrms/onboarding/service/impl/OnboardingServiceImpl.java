@@ -1,5 +1,7 @@
 package com.nexra.hrms.nexra.modules.hrms.onboarding.service.impl;
 
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.hrms.onboarding.dto.request.OnboardingPlanCreateRequest;
 import com.nexra.hrms.nexra.modules.hrms.onboarding.dto.request.OnboardingTaskCompleteRequest;
 import com.nexra.hrms.nexra.modules.hrms.onboarding.dto.request.OnboardingTaskCreateRequest;
@@ -36,6 +38,7 @@ public class OnboardingServiceImpl implements IOnboardingService {
 
     private final OnboardingPlanRepository planRepository;
     private final OnboardingTaskRepository taskRepository;
+    private final AuditEventService auditEventService;
 
     @Override
     @Transactional
@@ -54,7 +57,9 @@ public class OnboardingServiceImpl implements IOnboardingService {
         entity.setStatus("ACTIVE");
         entity.setCreatedBy(actorName(actor));
         entity.setUpdatedBy(actorName(actor));
-        return toPlanView(planRepository.save(entity));
+        OnboardingPlanEntity saved = planRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "CREATE_ONBOARDING_PLAN", actor, "ONBOARDING_PLAN", saved.getPlanId());
+        return toPlanView(saved);
     }
 
     @Override
@@ -78,7 +83,9 @@ public class OnboardingServiceImpl implements IOnboardingService {
         entity.setStatus("PENDING");
         entity.setCreatedBy(actorName(actor));
         entity.setUpdatedBy(actorName(actor));
-        return toTaskView(taskRepository.save(entity));
+        OnboardingTaskEntity saved = taskRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "CREATE_ONBOARDING_TASK", actor, "ONBOARDING_TASK", saved.getTaskId());
+        return toTaskView(saved);
     }
 
     @Override
@@ -99,7 +106,9 @@ public class OnboardingServiceImpl implements IOnboardingService {
         entity.setStatus("COMPLETED");
         entity.setUpdatedBy(actorName(actor));
         log.info("OnboardingServiceImpl - completeTask - tenantCode={}, taskId={}", request.tenantCode(), taskId);
-        return toTaskView(taskRepository.save(entity));
+        OnboardingTaskEntity saved = taskRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "COMPLETE_ONBOARDING_TASK", actor, "ONBOARDING_TASK", saved.getTaskId());
+        return toTaskView(saved);
     }
 
     @Override
@@ -183,6 +192,18 @@ public class OnboardingServiceImpl implements IOnboardingService {
 
     private String actorName(final AuthenticatedOnboardingUser actor) {
         return actor.email() != null ? actor.email() : String.valueOf(actor.userId());
+    }
+
+    private void recordAudit(
+        final String tenantCode,
+        final String action,
+        final AuthenticatedOnboardingUser actor,
+        final String targetType,
+        final String targetId
+    ) {
+        auditEventService.record(AuditEventRecord.of(tenantCode, "ONBOARDING", action, "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget(targetType, targetId));
     }
 
     private String normalizeTenant(final String value) {

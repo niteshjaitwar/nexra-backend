@@ -3,6 +3,8 @@ package com.nexra.hrms.nexra.modules.payroll.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.payroll.dto.ProfilePayrollGenerationRequest;
 import com.nexra.hrms.nexra.modules.payroll.dto.PayrollGenerationRequest;
 import com.nexra.hrms.nexra.modules.payroll.dto.PayrollLineItemRequest;
@@ -43,17 +45,20 @@ public class PayrollServiceImpl implements PayrollService {
     private final AuthReferenceClient authReferenceClient;
     private final ProfileDirectoryService profileDirectoryService;
     private final PayrollSlipRepository payrollSlipRepository;
+    private final AuditEventService auditEventService;
 
     public PayrollServiceImpl(
         final ObjectMapper objectMapper,
         final AuthReferenceClient authReferenceClient,
         final ProfileDirectoryService profileDirectoryService,
-        final PayrollSlipRepository payrollSlipRepository
+        final PayrollSlipRepository payrollSlipRepository,
+        final AuditEventService auditEventService
     ) {
         this.objectMapper = objectMapper;
         this.authReferenceClient = authReferenceClient;
         this.profileDirectoryService = profileDirectoryService;
         this.payrollSlipRepository = payrollSlipRepository;
+        this.auditEventService = auditEventService;
     }
 
     @Override
@@ -183,6 +188,9 @@ public class PayrollServiceImpl implements PayrollService {
             authHealth
         );
         payrollSlipRepository.save(toEntity(slip));
+        auditEventService.record(AuditEventRecord.of(slip.tenantCode(), "PAYROLL", "GENERATE_PAYROLL", "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget("PAYROLL_SLIP", slip.slipId()));
         log.info("PayrollServiceImpl - generatePayrollInternal - slipGenerated slipId={}, tenantCode={}, employeeId={}",
             slip.slipId(), slip.tenantCode(), slip.employeeId());
         return slip;

@@ -1,5 +1,7 @@
 package com.nexra.hrms.nexra.modules.hrms.performance.service.impl;
 
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.hrms.performance.dto.request.GoalUpsertRequest;
 import com.nexra.hrms.nexra.modules.hrms.performance.dto.request.ReviewCompleteRequest;
 import com.nexra.hrms.nexra.modules.hrms.performance.dto.request.ReviewCreateRequest;
@@ -36,6 +38,7 @@ public class PerformanceServiceImpl implements IPerformanceService {
 
     private final GoalRepository goalRepository;
     private final ReviewRepository reviewRepository;
+    private final AuditEventService auditEventService;
 
     @Override
     @Transactional
@@ -64,7 +67,9 @@ public class PerformanceServiceImpl implements IPerformanceService {
         entity.setStatus(trim(request.status()).toUpperCase());
         entity.setUpdatedBy(actorName(actor));
         log.info("PerformanceServiceImpl - upsertGoal - tenantCode={}, employeeId={}, isNew={}", request.tenantCode(), request.employeeId(), isNewGoal);
-        return toGoalView(goalRepository.save(entity));
+        GoalEntity saved = goalRepository.save(entity);
+        recordAudit(saved.getTenantCode(), isNewGoal ? "CREATE_GOAL" : "UPDATE_GOAL", actor, "GOAL", saved.getGoalId());
+        return toGoalView(saved);
     }
 
     @Override
@@ -132,7 +137,9 @@ public class PerformanceServiceImpl implements IPerformanceService {
         entity.setEmployeeComments(blankToNull(request.employeeComments()));
         entity.setCreatedBy(actorName(actor));
         entity.setUpdatedBy(actorName(actor));
-        return toReviewView(reviewRepository.save(entity));
+        ReviewEntity saved = reviewRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "CREATE_REVIEW", actor, "PERFORMANCE_REVIEW", saved.getReviewId());
+        return toReviewView(saved);
     }
 
     @Override
@@ -155,7 +162,9 @@ public class PerformanceServiceImpl implements IPerformanceService {
         entity.setStatus("COMPLETED");
         entity.setUpdatedBy(actorName(actor));
         log.info("PerformanceServiceImpl - completeReview - tenantCode={}, reviewId={}", request.tenantCode(), reviewId);
-        return toReviewView(reviewRepository.save(entity));
+        ReviewEntity saved = reviewRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "COMPLETE_REVIEW", actor, "PERFORMANCE_REVIEW", saved.getReviewId());
+        return toReviewView(saved);
     }
 
     @Override
@@ -257,6 +266,18 @@ public class PerformanceServiceImpl implements IPerformanceService {
 
     private String actorName(final AuthenticatedPerformanceUser actor) {
         return actor.email() != null ? actor.email() : String.valueOf(actor.userId());
+    }
+
+    private void recordAudit(
+        final String tenantCode,
+        final String action,
+        final AuthenticatedPerformanceUser actor,
+        final String targetType,
+        final String targetId
+    ) {
+        auditEventService.record(AuditEventRecord.of(tenantCode, "PERFORMANCE", action, "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget(targetType, targetId));
     }
 
     private String normalizeTenant(final String value) {

@@ -144,15 +144,32 @@ public class JwtServiceImpl implements JwtService {
         if (access.getProductRole() == null) {
             return Set.of();
         }
+        if (!isRoleCompatibleWithProduct(access)) {
+            return Set.of();
+        }
         return switch (access.getProductRole()) {
             case TENANT_ADMIN -> Set.of("ROLE_TENANT_ADMIN");
             case HR_MANAGER -> Set.of("ROLE_HR_ADMIN");
             case PAYROLL_ADMIN -> Set.of("ROLE_PAYROLL_ADMIN");
+            case FINANCE_ADMIN -> Set.of("ROLE_FINANCE_ADMIN");
+            case RECRUITMENT_ADMIN -> Set.of("ROLE_RECRUITMENT_ADMIN");
+            case PERFORMANCE_ADMIN -> Set.of("ROLE_PERFORMANCE_ADMIN");
+            case ONBOARDING_ADMIN -> Set.of("ROLE_ONBOARDING_ADMIN");
             case DEPARTMENT_HEAD -> Set.of("ROLE_MANAGER");
             case SALES_MANAGER -> Set.of("ROLE_CRM_ADMIN");
             case ACCOUNT_MANAGER -> Set.of("ROLE_ACCOUNT_MANAGER");
             case SUPPORT_AGENT -> Set.of("ROLE_SUPPORT_AGENT");
             case SALES_REP, EMPLOYEE -> Set.of();
+        };
+    }
+
+    private boolean isRoleCompatibleWithProduct(final UserProductAccess access) {
+        return switch (access.getProductRole()) {
+            case TENANT_ADMIN -> true;
+            case EMPLOYEE, HR_MANAGER, PAYROLL_ADMIN, FINANCE_ADMIN, RECRUITMENT_ADMIN, PERFORMANCE_ADMIN,
+                ONBOARDING_ADMIN, DEPARTMENT_HEAD -> access.getProduct() != null && "HRMS".equals(access.getProduct().name());
+            case SALES_REP, ACCOUNT_MANAGER, SALES_MANAGER, SUPPORT_AGENT ->
+                access.getProduct() != null && "CRM".equals(access.getProduct().name());
         };
     }
 

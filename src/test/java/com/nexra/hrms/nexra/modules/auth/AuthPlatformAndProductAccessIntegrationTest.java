@@ -223,6 +223,25 @@ class AuthPlatformAndProductAccessIntegrationTest {
     }
 
     @Test
+    @DisplayName("Tenant admin cannot grant a product role that is incompatible with the product")
+    void shouldRejectProductAccessGrantWhenRoleDoesNotBelongToProduct() throws Exception {
+        Tenant tenant = createTenant("pr");
+        UserAccount admin = createUser(tenant, "admin@" + tenant.getCode() + ".local", UserRole.ROLE_TENANT_ADMIN);
+        UserAccount user = createUser(tenant, "user@" + tenant.getCode() + ".local", UserRole.ROLE_USER);
+        String bearer = jwtService.generateAccessToken(userAccountRepository.findById(admin.getId()).orElseThrow());
+
+        mockMvc.perform(post("/api/v1/admin/users/" + user.getId() + "/products")
+                .header("Authorization", "Bearer " + bearer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"product":"HRMS","productRole":"SALES_REP"}
+                    """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.code").value("BUSINESS_RULE_VIOLATION"));
+    }
+
+    @Test
     @DisplayName("Tenant admin JWT cannot manage product access for another tenant")
     void shouldRejectCrossTenantProductAccessManagement() throws Exception {
         Tenant tenantA = createTenant("ta");

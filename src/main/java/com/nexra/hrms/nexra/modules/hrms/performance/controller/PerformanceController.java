@@ -230,7 +230,8 @@ public class PerformanceController {
     }
 
     private void requireAdmin(final AuthenticatedPerformanceUser actor) {
-        if (hasRole(actor, "PLATFORM_ADMIN") || hasRole(actor, "TENANT_ADMIN") || hasRole(actor, "HR_ADMIN")) {
+        if (hasRole(actor, "PLATFORM_ADMIN") || hasRole(actor, "TENANT_ADMIN") || hasRole(actor, "HR_ADMIN")
+            || hasRole(actor, "PERFORMANCE_ADMIN")) {
             return;
         }
         throw new PerformanceForbiddenException("User does not have performance administration permission");

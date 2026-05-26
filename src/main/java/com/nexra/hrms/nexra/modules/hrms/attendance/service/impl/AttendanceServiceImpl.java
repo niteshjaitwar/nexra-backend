@@ -1,5 +1,7 @@
 package com.nexra.hrms.nexra.modules.hrms.attendance.service.impl;
 
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.CheckInRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.CheckOutRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.ShiftUpsertRequest;
@@ -42,6 +44,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     private final ShiftRepository shiftRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
+    private final AuditEventService auditEventService;
 
     /**
      * Creates or updates a shift definition.
@@ -71,7 +74,9 @@ public class AttendanceServiceImpl implements AttendanceService {
         entity.setGraceMinutes(request.graceMinutes());
         entity.setActive(request.active() == null || request.active());
         entity.setUpdatedBy(actor.email());
-        return toModel(shiftRepository.save(entity));
+        ShiftEntity saved = shiftRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "UPSERT_SHIFT", actor, "SHIFT", saved.getCode());
+        return toModel(saved);
     }
 
     /**
@@ -137,7 +142,9 @@ public class AttendanceServiceImpl implements AttendanceService {
         entity.setNotes(blankToNull(request.notes()));
         entity.setStatus(STATUS_CHECKED_IN);
         entity.setUpdatedBy(actor.email());
-        return toModel(attendanceRecordRepository.save(entity));
+        AttendanceRecordEntity saved = attendanceRecordRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "CHECK_IN", actor, "ATTENDANCE_RECORD", saved.getId());
+        return toModel(saved);
     }
 
     /**
@@ -178,7 +185,9 @@ public class AttendanceServiceImpl implements AttendanceService {
         entity.setNotes(notes != null ? notes : entity.getNotes());
         entity.setStatus(hours.compareTo(BigDecimal.ZERO) > 0 ? STATUS_PRESENT : STATUS_PARTIAL);
         entity.setUpdatedBy(actor.email());
-        return toModel(attendanceRecordRepository.save(entity));
+        AttendanceRecordEntity saved = attendanceRecordRepository.save(entity);
+        recordAudit(saved.getTenantCode(), "CHECK_OUT", actor, "ATTENDANCE_RECORD", saved.getId());
+        return toModel(saved);
     }
 
     /**
@@ -338,6 +347,18 @@ public class AttendanceServiceImpl implements AttendanceService {
         if (!actor.tenantCode().equalsIgnoreCase(tenantCode)) {
             throw new AttendanceBusinessException("Token tenant does not match requested tenant");
         }
+    }
+
+    private void recordAudit(
+        final String tenantCode,
+        final String action,
+        final AuthenticatedAttendanceUser actor,
+        final String targetType,
+        final String targetId
+    ) {
+        auditEventService.record(AuditEventRecord.of(tenantCode, "ATTENDANCE", action, "SUCCESS")
+            .withActor(actor.email(), actor.userId().toString())
+            .withTarget(targetType, targetId));
     }
 
     private BigDecimal amount(final BigDecimal value) {

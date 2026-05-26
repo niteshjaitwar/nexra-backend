@@ -219,7 +219,8 @@ public class OnboardingController {
     }
 
     private void requireAdmin(final AuthenticatedOnboardingUser actor) {
-        if (hasRole(actor, "PLATFORM_ADMIN") || hasRole(actor, "TENANT_ADMIN") || hasRole(actor, "HR_ADMIN")) {
+        if (hasRole(actor, "PLATFORM_ADMIN") || hasRole(actor, "TENANT_ADMIN") || hasRole(actor, "HR_ADMIN")
+            || hasRole(actor, "ONBOARDING_ADMIN")) {
             return;
         }
         throw new OnboardingForbiddenException("User does not have onboarding administration permission");

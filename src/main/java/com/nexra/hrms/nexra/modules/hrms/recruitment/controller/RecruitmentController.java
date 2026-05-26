@@ -250,7 +250,8 @@ public class RecruitmentController {
     }
 
     private void requireAdmin(final AuthenticatedRecruitmentUser actor) {
-        if (hasRole(actor, "PLATFORM_ADMIN") || hasRole(actor, "TENANT_ADMIN") || hasRole(actor, "HR_ADMIN")) {
+        if (hasRole(actor, "PLATFORM_ADMIN") || hasRole(actor, "TENANT_ADMIN") || hasRole(actor, "HR_ADMIN")
+            || hasRole(actor, "RECRUITMENT_ADMIN")) {
             return;
         }
         throw new RecruitmentForbiddenException("User does not have recruitment administration permission");
