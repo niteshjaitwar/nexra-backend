@@ -2,6 +2,12 @@ package com.nexra.hrms.nexra.modules.crm;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,13 +15,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -60,6 +59,11 @@ class CrmAdministrationIntegrationTest {
                 .param("moduleKey", "crm-deals"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].moduleKey").value("crm-deals"));
+
+        mockMvc.perform(get("/api/v1/crm/admin/custom-fields")
+                .header("Authorization", "Bearer " + token)
+                .param("moduleKey", "OPPORTUNITIES"))
+            .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/v1/crm/admin/workflow-rules")
                 .header("Authorization", "Bearer " + token)

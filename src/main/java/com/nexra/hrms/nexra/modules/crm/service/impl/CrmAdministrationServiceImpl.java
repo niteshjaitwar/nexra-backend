@@ -20,9 +20,6 @@ import com.nexra.hrms.nexra.modules.crm.repository.CrmRecordSharingRuleRepositor
 import com.nexra.hrms.nexra.modules.crm.repository.CrmWorkflowRuleRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.IntegrationWebhookSubscriptionRepository;
 import com.nexra.hrms.nexra.modules.crm.service.CrmAdministrationService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -31,14 +28,39 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class CrmAdministrationServiceImpl implements CrmAdministrationService {
 
     private static final Set<String> MODULE_KEYS = Set.of("crm-leads", "crm-accounts", "crm-contacts", "crm-deals", "crm-activities");
+    private static final Map<String, String> MODULE_KEY_ALIASES = Map.ofEntries(
+        Map.entry("lead", "crm-leads"),
+        Map.entry("leads", "crm-leads"),
+        Map.entry("crm-lead", "crm-leads"),
+        Map.entry("account", "crm-accounts"),
+        Map.entry("accounts", "crm-accounts"),
+        Map.entry("crm-account", "crm-accounts"),
+        Map.entry("contact", "crm-contacts"),
+        Map.entry("contacts", "crm-contacts"),
+        Map.entry("crm-contact", "crm-contacts"),
+        Map.entry("deal", "crm-deals"),
+        Map.entry("deals", "crm-deals"),
+        Map.entry("opportunity", "crm-deals"),
+        Map.entry("opportunities", "crm-deals"),
+        Map.entry("crm-deal", "crm-deals"),
+        Map.entry("crm-opportunity", "crm-deals"),
+        Map.entry("activity", "crm-activities"),
+        Map.entry("activities", "crm-activities"),
+        Map.entry("task", "crm-activities"),
+        Map.entry("tasks", "crm-activities"),
+        Map.entry("crm-activity", "crm-activities")
+    );
     private static final Set<String> FIELD_TYPES = Set.of("TEXT", "TEXTAREA", "NUMBER", "DATE", "DATETIME", "BOOLEAN", "PICKLIST", "URL", "EMAIL", "PHONE");
     private static final Set<String> TRIGGER_EVENTS = Set.of("RECORD_CREATED", "RECORD_UPDATED", "RECORD_DELETED", "DATE_REACHED");
     private static final Set<String> PRINCIPAL_TYPES = Set.of("ROLE", "GROUP", "USER", "OWNER_MANAGER");
@@ -252,11 +274,12 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
     }
 
     private String normalizeModuleKey(final String value) {
-        final String normalized = normalize(value).toLowerCase(Locale.ROOT);
-        if (!MODULE_KEYS.contains(normalized)) {
+        final String normalized = normalize(value).toLowerCase(Locale.ROOT).replace('_', '-');
+        final String canonical = MODULE_KEY_ALIASES.getOrDefault(normalized, normalized);
+        if (!MODULE_KEYS.contains(canonical)) {
             throw new NexraValidationException("Unsupported CRM module key.");
         }
-        return normalized;
+        return canonical;
     }
 
     private String normalizeAllowed(final String value, final Set<String> allowed, final String errorMessage) {
