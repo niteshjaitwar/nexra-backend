@@ -4,7 +4,6 @@ import com.nexra.hrms.nexra.common.persistence.BaseAuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 @Entity
@@ -24,8 +23,7 @@ public class CrmRecordSharingRuleEntity extends BaseAuditableEntity {
     @Column(name = "name", nullable = false, length = 160)
     private String name;
 
-    @Lob
-    @Column(name = "criteria_json", nullable = false)
+    @Column(name = "criteria_json", nullable = false, columnDefinition = "TEXT")
     private String criteriaJson;
 
     @Column(name = "principal_type", nullable = false, length = 40)

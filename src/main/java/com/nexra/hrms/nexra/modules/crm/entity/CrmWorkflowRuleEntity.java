@@ -4,7 +4,6 @@ import com.nexra.hrms.nexra.common.persistence.BaseAuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 @Entity
@@ -27,12 +26,10 @@ public class CrmWorkflowRuleEntity extends BaseAuditableEntity {
     @Column(name = "trigger_event", nullable = false, length = 60)
     private String triggerEvent;
 
-    @Lob
-    @Column(name = "criteria_json", nullable = false)
+    @Column(name = "criteria_json", nullable = false, columnDefinition = "TEXT")
     private String criteriaJson;
 
-    @Lob
-    @Column(name = "actions_json", nullable = false)
+    @Column(name = "actions_json", nullable = false, columnDefinition = "TEXT")
     private String actionsJson;
 
     @Column(name = "priority", nullable = false)

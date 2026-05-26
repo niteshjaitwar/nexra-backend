@@ -4,7 +4,6 @@ import com.nexra.hrms.nexra.common.persistence.BaseAuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 @Entity
@@ -36,12 +35,10 @@ public class CrmCustomFieldDefinitionEntity extends BaseAuditableEntity {
     @Column(name = "searchable", nullable = false)
     private boolean searchable;
 
-    @Lob
-    @Column(name = "options_json")
+    @Column(name = "options_json", columnDefinition = "TEXT")
     private String optionsJson;
 
-    @Lob
-    @Column(name = "validation_json")
+    @Column(name = "validation_json", columnDefinition = "TEXT")
     private String validationJson;
 
     @Column(name = "active", nullable = false)
