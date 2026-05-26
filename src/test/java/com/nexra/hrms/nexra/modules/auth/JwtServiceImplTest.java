@@ -105,5 +105,6 @@ class JwtServiceImplTest {
         assertThat(principal.productRoles())
             .containsEntry("CRM", "SALES_MANAGER")
             .containsEntry("HRMS", "TENANT_ADMIN");
+        assertThat(principal.roles()).contains("ROLE_CRM_ADMIN", "ROLE_TENANT_ADMIN");
     }
 }

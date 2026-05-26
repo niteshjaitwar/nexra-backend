@@ -50,6 +50,9 @@ public class JwtServiceImpl implements JwtService {
         Set<String> roleNames = userAccount.getRoles().stream().map(Enum::name).collect(Collectors.toSet());
 
         List<UserProductAccess> productAccessList = userProductAccessRepository.findByUser(userAccount);
+        roleNames.addAll(productAccessList.stream()
+            .flatMap(access -> derivedAuthorities(access).stream())
+            .collect(Collectors.toSet()));
         Set<String> products = productAccessList.stream()
             .map(access -> access.getProduct().name())
             .collect(Collectors.toSet());
@@ -135,6 +138,22 @@ public class JwtServiceImpl implements JwtService {
             throw new IllegalStateException("AUTH_JWT_SECRET must be at least 32 bytes.");
         }
         return Keys.hmacShaKeyFor(bytes);
+    }
+
+    private Set<String> derivedAuthorities(final UserProductAccess access) {
+        if (access.getProductRole() == null) {
+            return Set.of();
+        }
+        return switch (access.getProductRole()) {
+            case TENANT_ADMIN -> Set.of("ROLE_TENANT_ADMIN");
+            case HR_MANAGER -> Set.of("ROLE_HR_ADMIN");
+            case PAYROLL_ADMIN -> Set.of("ROLE_PAYROLL_ADMIN");
+            case DEPARTMENT_HEAD -> Set.of("ROLE_MANAGER");
+            case SALES_MANAGER -> Set.of("ROLE_CRM_ADMIN");
+            case ACCOUNT_MANAGER -> Set.of("ROLE_ACCOUNT_MANAGER");
+            case SUPPORT_AGENT -> Set.of("ROLE_SUPPORT_AGENT");
+            case SALES_REP, EMPLOYEE -> Set.of();
+        };
     }
 
     private String requireClaim(final Claims claims, final String name) {
