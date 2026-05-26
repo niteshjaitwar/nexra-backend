@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -31,7 +32,7 @@ class CrmAdministrationIntegrationTest {
 
     @Test
     void crmAdminCanConfigureCustomizationAutomationSharingAndWebhooks() throws Exception {
-        final String token = bearerToken("ACME", List.of("ROLE_CRM_ADMIN"), Set.of("CRM"));
+        final String token = bearerToken("ACME", List.of("ROLE_USER"), Set.of("CRM"), Map.of("CRM", "SALES_MANAGER"));
         final String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         final String fieldKey = "renewal_score_" + suffix;
 
@@ -129,18 +130,18 @@ class CrmAdministrationIntegrationTest {
 
     @Test
     void crmAdministrationRequiresCrmAdminRole() throws Exception {
-        final String token = bearerToken("ACME", List.of("ROLE_CRM_USER"), Set.of("CRM"));
+        final String token = bearerToken("ACME", List.of("ROLE_USER"), Set.of("CRM"), Map.of("CRM", "SALES_REP"));
 
         mockMvc.perform(get("/api/v1/crm/admin/custom-fields")
                 .header("Authorization", "Bearer " + token)
                 .param("moduleKey", "crm-deals"))
             .andExpect(status().isForbidden())
-            .andExpect(jsonPath("$.message").value("CRM administration requires CRM admin permission."));
+            .andExpect(jsonPath("$.message").value("CRM administration requires CRM tenant admin or sales manager permission."));
     }
 
     @Test
     void rejectsUnsafeWebhookPorts() throws Exception {
-        final String token = bearerToken("ACME", List.of("ROLE_CRM_ADMIN"), Set.of("CRM"));
+        final String token = bearerToken("ACME", List.of("ROLE_USER"), Set.of("CRM"), Map.of("CRM", "SALES_MANAGER"));
 
         mockMvc.perform(post("/api/v1/crm/admin/webhooks")
                 .header("Authorization", "Bearer " + token)
@@ -157,7 +158,12 @@ class CrmAdministrationIntegrationTest {
             .andExpect(jsonPath("$.message").value("Webhook targetUrl may only use port 80 or 443."));
     }
 
-    private String bearerToken(final String tenantCode, final List<String> roles, final Set<String> products) {
+    private String bearerToken(
+        final String tenantCode,
+        final List<String> roles,
+        final Set<String> products,
+        final Map<String, String> productRoles
+    ) {
         final SecretKey key = Keys.hmacShaKeyFor("test-jwt-secret-test-jwt-secret-test-jwt".getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()
             .subject("crm-admin@nexra.test")
@@ -165,6 +171,7 @@ class CrmAdministrationIntegrationTest {
             .claim("tenant", tenantCode)
             .claim("roles", roles)
             .claim("products", products)
+            .claim("product_roles", productRoles)
             .signWith(key)
             .compact();
     }

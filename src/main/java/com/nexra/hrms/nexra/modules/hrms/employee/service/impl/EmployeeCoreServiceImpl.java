@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -253,6 +254,22 @@ public class EmployeeCoreServiceImpl implements EmployeeCoreService {
             "EmployeeCoreServiceImpl - listEmployees(paginated) - tenantCode={}, departmentId={}, includeInactive={}, page={}, size={}, actor={}",
             tenant, departmentId, includeInactive, pageable.getPageNumber(), pageable.getPageSize(), actor.email()
         );
+        if (!canManageEmployeeData(actor)) {
+            List<EmployeeEntity> self = findActorEmployee(tenant, actor)
+                .stream()
+                .filter(EmployeeEntity::isActive)
+                .toList();
+            List<Employee> items = pageable.getPageNumber() == 0 ? self.stream().map(this::toModel).toList() : List.of();
+            return new PageResponse<>(
+                items,
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                self.size(),
+                self.isEmpty() ? 0 : 1,
+                false,
+                pageable.getPageNumber() > 0 && !self.isEmpty()
+            );
+        }
         String departmentFilter = blankToNull(departmentId);
         org.springframework.data.domain.Page<EmployeeEntity> page;
         if (departmentFilter == null) {
@@ -279,8 +296,12 @@ public class EmployeeCoreServiceImpl implements EmployeeCoreService {
             employeeId,
             actor.email()
         );
-        return toModel(employeeRepository.findByIdAndTenantCodeIgnoreCase(employeeId, normTenant(tenantCode))
-            .orElseThrow(() -> new EmployeeCoreResourceNotFoundException("Employee not found: " + employeeId)));
+        EmployeeEntity entity = employeeRepository.findByIdAndTenantCodeIgnoreCase(employeeId, normTenant(tenantCode))
+            .orElseThrow(() -> new EmployeeCoreResourceNotFoundException("Employee not found: " + employeeId));
+        if (!canManageEmployeeData(actor) && !isActorEmployee(actor, entity)) {
+            throw new EmployeeCoreBusinessException("User cannot access another employee profile");
+        }
+        return toModel(entity);
     }
 
     @Override
@@ -288,6 +309,17 @@ public class EmployeeCoreServiceImpl implements EmployeeCoreService {
         verifyTenant(actor, tenantCode);
         String tenant = normTenant(tenantCode);
         log.debug("EmployeeCoreServiceImpl - summary - tenantCode={}, actor={}", tenant, actor.email());
+        if (!canManageEmployeeData(actor)) {
+            boolean hasEmployeeProfile = findActorEmployee(tenant, actor)
+                .filter(EmployeeEntity::isActive)
+                .isPresent();
+            return Map.of(
+                "tenantCode", tenant,
+                "organizationProfileConfigured", organizationProfileRepository.findByTenantCodeIgnoreCase(tenant).isPresent(),
+                "activeDepartments", 0,
+                "activeEmployees", hasEmployeeProfile ? 1 : 0
+            );
+        }
         return Map.of(
             "tenantCode", tenant,
             "organizationProfileConfigured", organizationProfileRepository.findByTenantCodeIgnoreCase(tenant).isPresent(),
@@ -359,6 +391,31 @@ public class EmployeeCoreServiceImpl implements EmployeeCoreService {
         if (!actor.tenantCode().equalsIgnoreCase(tenantCode)) {
             throw new EmployeeCoreBusinessException("Token tenant does not match requested tenant");
         }
+    }
+
+    private boolean canManageEmployeeData(final AuthenticatedEmployeeCoreUser actor) {
+        return hasRole(actor, "PLATFORM_ADMIN") || hasRole(actor, "TENANT_ADMIN") || hasRole(actor, "HR_ADMIN");
+    }
+
+    private boolean hasRole(final AuthenticatedEmployeeCoreUser actor, final String role) {
+        return actor.roles().contains(role) || actor.roles().contains("ROLE_" + role);
+    }
+
+    private Optional<EmployeeEntity> findActorEmployee(
+        final String tenant,
+        final AuthenticatedEmployeeCoreUser actor
+    ) {
+        final String userId = actor.userId().toString();
+        return employeeRepository.findByTenantCodeIgnoreCaseAndUserAccountId(tenant, userId)
+            .or(() -> employeeRepository.findByIdAndTenantCodeIgnoreCase(userId, tenant))
+            .or(() -> employeeRepository.findByTenantCodeIgnoreCaseAndWorkEmailIgnoreCase(tenant, actor.email()));
+    }
+
+    private boolean isActorEmployee(final AuthenticatedEmployeeCoreUser actor, final EmployeeEntity entity) {
+        final String userId = actor.userId().toString();
+        return userId.equals(entity.getUserAccountId())
+            || userId.equals(entity.getId())
+            || actor.email().equalsIgnoreCase(entity.getWorkEmail());
     }
 
     private String normTenant(final String tenantCode) {

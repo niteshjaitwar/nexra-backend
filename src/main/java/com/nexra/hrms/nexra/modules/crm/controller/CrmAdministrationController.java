@@ -153,9 +153,12 @@ public class CrmAdministrationController {
         if (!principal.products().contains("CRM")) {
             throw new NexraForbiddenException("User does not have CRM product access.");
         }
-        if (principal.roles().contains("ROLE_CRM_ADMIN") || principal.roles().contains("ROLE_PLATFORM_ADMIN")) {
+        final String crmProductRole = principal.productRoles().get("CRM");
+        if (principal.roles().contains("ROLE_PLATFORM_ADMIN")
+            || "TENANT_ADMIN".equals(crmProductRole)
+            || "SALES_MANAGER".equals(crmProductRole)) {
             return;
         }
-        throw new NexraForbiddenException("CRM administration requires CRM admin permission.");
+        throw new NexraForbiddenException("CRM administration requires CRM tenant admin or sales manager permission.");
     }
 }
