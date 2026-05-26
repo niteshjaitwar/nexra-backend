@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (RuntimeException exception) {
-            log.error("JwtAuthenticationFilter() - doFilterInternal() - Invalid JWT token: {}", exception.getMessage(), exception);
+            log.warn("JwtAuthenticationFilter() - doFilterInternal() - Invalid JWT token: {}", exception.getMessage());
             SecurityContextHolder.clearContext();
         }
 

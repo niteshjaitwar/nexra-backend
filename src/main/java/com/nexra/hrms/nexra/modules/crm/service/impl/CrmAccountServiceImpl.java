@@ -1,6 +1,8 @@
 package com.nexra.hrms.nexra.modules.crm.service.impl;
 
 import com.nexra.hrms.nexra.common.api.PageResponse;
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.common.exception.NexraNotFoundException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
@@ -24,6 +26,7 @@ public class CrmAccountServiceImpl implements CrmAccountService {
 
     private final CrmAccountRepository repository;
     private final CrmProperties properties;
+    private final AuditEventService auditEventService;
 
     @Override
     public CrmAccount create(final String tenantCode, final CrmAccountCreateRequest request) {
@@ -34,7 +37,11 @@ public class CrmAccountServiceImpl implements CrmAccountService {
         entity.setWebsite(normalizeNullable(request.website()));
         entity.setIndustry(normalizeNullable(request.industry()));
         entity.setOwnerUserId(normalize(request.ownerUserId()));
-        return toModel(repository.save(entity));
+        final CrmAccountEntity saved = repository.save(entity);
+        auditEventService.record(AuditEventRecord.of(saved.getTenantCode(), "CRM", "CREATE_ACCOUNT", "SUCCESS")
+            .withActor(saved.getOwnerUserId(), null)
+            .withTarget("CRM_ACCOUNT", saved.getId()));
+        return toModel(saved);
     }
 
     @Override
@@ -45,7 +52,11 @@ public class CrmAccountServiceImpl implements CrmAccountService {
         entity.setWebsite(valueOrDefaultNullable(request.website(), entity.getWebsite()));
         entity.setIndustry(valueOrDefaultNullable(request.industry(), entity.getIndustry()));
         entity.setOwnerUserId(valueOrDefault(request.ownerUserId(), entity.getOwnerUserId()));
-        return toModel(repository.save(entity));
+        final CrmAccountEntity saved = repository.save(entity);
+        auditEventService.record(AuditEventRecord.of(saved.getTenantCode(), "CRM", "UPDATE_ACCOUNT", "SUCCESS")
+            .withActor(saved.getOwnerUserId(), null)
+            .withTarget("CRM_ACCOUNT", saved.getId()));
+        return toModel(saved);
     }
 
     @Override
@@ -68,6 +79,9 @@ public class CrmAccountServiceImpl implements CrmAccountService {
         final CrmAccountEntity entity = repository.findByIdAndTenantCodeIgnoreCase(accountId, normalize(tenantCode))
             .orElseThrow(() -> new NexraNotFoundException("CRM account not found for id: " + accountId));
         repository.delete(entity);
+        auditEventService.record(AuditEventRecord.of(entity.getTenantCode(), "CRM", "DELETE_ACCOUNT", "SUCCESS")
+            .withActor(entity.getOwnerUserId(), null)
+            .withTarget("CRM_ACCOUNT", accountId));
     }
 
     private void validatePaging(final int page, final int size) {
@@ -111,4 +125,3 @@ public class CrmAccountServiceImpl implements CrmAccountService {
         );
     }
 }
-

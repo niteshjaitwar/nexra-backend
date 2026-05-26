@@ -38,6 +38,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -237,7 +238,7 @@ public class AuthServiceImpl implements AuthService {
         log.info("AuthServiceImpl() - verifyOtp() - Validating OTP, tenantCode={}, email={}, purpose={}",
             request.tenantCode(), maskEmail(request.email()), request.purpose());
         UserAccount user = resolveUser(request.tenantCode(), request.email());
-        consumeVerificationToken(user, request.purpose(), VerificationType.OTP, request.otp());
+        consumeVerificationTokenWithProtection(user, request.purpose(), VerificationType.OTP, request.otp());
         securityAuditService.record("OTP_VERIFY", user.getTenant().getCode(), user.getEmail(), "SUCCESS", "OTP verified.");
         return applyVerificationOutcome(user, request.purpose());
     }
@@ -283,7 +284,7 @@ public class AuthServiceImpl implements AuthService {
         log.info("AuthServiceImpl() - verifyLink() - Validating link token, tenantCode={}, email={}, purpose={}",
             request.tenantCode(), maskEmail(request.email()), request.purpose());
         UserAccount user = resolveUser(request.tenantCode(), request.email());
-        consumeVerificationToken(user, request.purpose(), VerificationType.EMAIL_LINK, request.token());
+        consumeVerificationTokenWithProtection(user, request.purpose(), VerificationType.EMAIL_LINK, request.token());
         securityAuditService.record("LINK_VERIFY", user.getTenant().getCode(), user.getEmail(), "SUCCESS", "Verification link validated.");
         return applyVerificationOutcome(user, request.purpose());
     }
@@ -323,7 +324,7 @@ public class AuthServiceImpl implements AuthService {
             .orElseThrow(() -> new UnauthorizedException("User not found for tenant."));
     }
 
-    private java.util.Optional<UserAccount> findUser(final String tenantCode, final String email) {
+    private Optional<UserAccount> findUser(final String tenantCode, final String email) {
         return tenantRepository.findByCodeIgnoreCaseAndActiveTrue(tenantCode)
             .flatMap(tenant -> userAccountRepository.findByTenantAndEmailIgnoreCase(tenant, email));
     }
@@ -422,6 +423,23 @@ public class AuthServiceImpl implements AuthService {
         verificationTokenRepository.save(token);
     }
 
+    private void consumeVerificationTokenWithProtection(
+        final UserAccount user,
+        final VerificationPurpose purpose,
+        final VerificationType type,
+        final String rawToken
+    ) {
+        String verificationKey = toVerificationKey(user, purpose, type);
+        loginProtectionService.assertVerificationAttemptAllowed(verificationKey);
+        try {
+            consumeVerificationToken(user, purpose, type, rawToken);
+            loginProtectionService.clearVerificationFailures(verificationKey);
+        } catch (UnauthorizedException exception) {
+            loginProtectionService.recordVerificationFailure(verificationKey);
+            throw exception;
+        }
+    }
+
     /**
      * Resolves verification token expiry configuration by token type.
      *
@@ -516,5 +534,13 @@ public class AuthServiceImpl implements AuthService {
      */
     private String toSecurityKey(final String tenantCode, final String email) {
         return normalizeTenantCode(tenantCode) + ":" + normalizeEmail(email);
+    }
+
+    private String toVerificationKey(
+        final UserAccount user,
+        final VerificationPurpose purpose,
+        final VerificationType type
+    ) {
+        return toSecurityKey(user.getTenant().getCode(), user.getEmail()) + ":" + purpose.name() + ":" + type.name();
     }
 }

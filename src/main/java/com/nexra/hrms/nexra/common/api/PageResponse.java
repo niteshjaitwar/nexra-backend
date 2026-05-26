@@ -2,6 +2,7 @@ package com.nexra.hrms.nexra.common.api;
 
 import org.springframework.data.domain.Page;
 
+import java.util.function.Function;
 import java.util.List;
 
 /**
@@ -55,7 +56,7 @@ public record PageResponse<T>(
      * @param <T>     target type.
      * @return immutable page response with mapped items.
      */
-    public static <S, T> PageResponse<T> map(final PageResponse<S> source, final java.util.function.Function<S, T> mapper) {
+    public static <S, T> PageResponse<T> map(final PageResponse<S> source, final Function<S, T> mapper) {
         final List<T> mapped = source.items().stream().map(mapper).toList();
         return new PageResponse<>(
                 mapped,

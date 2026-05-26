@@ -63,6 +63,10 @@ public class ProductionReadinessValidator implements ApplicationRunner {
             "app.auth.security.cors-allowed-origins must not include localhost/127.0.0.1 in prod.");
         assertCondition(Boolean.parseBoolean(environment.getProperty("nexra.common.rate-limit.distributed-enabled", "false")),
             "nexra.common.rate-limit.distributed-enabled must be true in prod.");
+        assertCondition(!Boolean.parseBoolean(environment.getProperty("springdoc.api-docs.enabled", "false")),
+            "springdoc.api-docs.enabled must be false in prod.");
+        assertCondition(!Boolean.parseBoolean(environment.getProperty("springdoc.swagger-ui.enabled", "false")),
+            "springdoc.swagger-ui.enabled must be false in prod.");
         assertCondition(authProperties.getSecurity().isRedisEnabled(),
             "app.auth.security.redis-enabled must be true in prod.");
         assertCondition(!isBlank(environment.getProperty("spring.data.redis.host")),

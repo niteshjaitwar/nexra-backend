@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -19,18 +20,28 @@ public class AdminInsightsServiceImpl implements AdminInsightsService {
     private final AuditEventService auditEventService;
 
     @Override
-    public Map<String, Long> tenantSummary(final String tenantCode) {
+    public Map<String, Long> tenantSummary(
+        final String tenantCode,
+        final Set<String> products,
+        final boolean platformAdmin
+    ) {
         final Map<String, Long> summary = new LinkedHashMap<>();
-        summary.put("employees", count("SELECT COUNT(*) FROM ec_employees WHERE tenant_code = ?", tenantCode));
-        summary.put("departments", count("SELECT COUNT(*) FROM ec_departments WHERE tenant_code = ?", tenantCode));
-        summary.put("attendanceRecords", count("SELECT COUNT(*) FROM at_records WHERE tenant_code = ?", tenantCode));
-        summary.put("leaveRequests", count("SELECT COUNT(*) FROM lv_leave_requests WHERE tenant_code = ?", tenantCode));
-        summary.put("timesheetEntries", count("SELECT COUNT(*) FROM ts_entries WHERE tenant_code = ?", tenantCode));
-        summary.put("expenseClaims", count("SELECT COUNT(*) FROM ex_claims WHERE tenant_code = ?", tenantCode));
-        summary.put("payrollSlips", count("SELECT COUNT(*) FROM payroll_slips WHERE tenant_code = ?", tenantCode));
-        summary.put("crmLeads", count("SELECT COUNT(*) FROM crm_leads WHERE tenant_code = ?", tenantCode));
-        summary.put("crmAccounts", count("SELECT COUNT(*) FROM crm_accounts WHERE tenant_code = ?", tenantCode));
-        summary.put("crmDeals", count("SELECT COUNT(*) FROM crm_deals WHERE tenant_code = ?", tenantCode));
+        if (platformAdmin || products.contains("HRMS")) {
+            summary.put("employees", count("SELECT COUNT(*) FROM ec_employees WHERE tenant_code = ?", tenantCode));
+            summary.put("departments", count("SELECT COUNT(*) FROM ec_departments WHERE tenant_code = ?", tenantCode));
+            summary.put("attendanceRecords", count("SELECT COUNT(*) FROM at_records WHERE tenant_code = ?", tenantCode));
+            summary.put("leaveRequests", count("SELECT COUNT(*) FROM lv_leave_requests WHERE tenant_code = ?", tenantCode));
+            summary.put("timesheetEntries", count("SELECT COUNT(*) FROM ts_entries WHERE tenant_code = ?", tenantCode));
+            summary.put("expenseClaims", count("SELECT COUNT(*) FROM ex_claims WHERE tenant_code = ?", tenantCode));
+        }
+        if (platformAdmin || products.contains("PAYROLL")) {
+            summary.put("payrollSlips", count("SELECT COUNT(*) FROM payroll_slips WHERE tenant_code = ?", tenantCode));
+        }
+        if (platformAdmin || products.contains("CRM")) {
+            summary.put("crmLeads", count("SELECT COUNT(*) FROM crm_leads WHERE tenant_code = ?", tenantCode));
+            summary.put("crmAccounts", count("SELECT COUNT(*) FROM crm_accounts WHERE tenant_code = ?", tenantCode));
+            summary.put("crmDeals", count("SELECT COUNT(*) FROM crm_deals WHERE tenant_code = ?", tenantCode));
+        }
         return summary;
     }
 

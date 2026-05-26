@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 import com.nexra.hrms.nexra.modules.auth.repository.VerificationTokenRepository;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -276,7 +277,7 @@ class AuthFlowIntegrationTest {
 
     @Test
     void shouldRevokeRefreshTokenOnLogout() throws Exception {
-        String tenantCode = "logout" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        String tenantCode = "logout" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         String email = "user@" + tenantCode + ".local";
         String refreshToken = createVerifiedUserAndLogin(tenantCode, email);
 
@@ -301,7 +302,7 @@ class AuthFlowIntegrationTest {
 
     @Test
     void shouldRevokeActiveSessionsWhenRevokedRefreshTokenIsReused() throws Exception {
-        String tenantCode = "reuse" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        String tenantCode = "reuse" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         String email = "user@" + tenantCode + ".local";
         String originalRefreshToken = createVerifiedUserAndLogin(tenantCode, email);
 

@@ -92,4 +92,27 @@ public class RedisLoginProtectionService implements LoginProtectionService {
             throw new RateLimitExceededException("OTP request limit exceeded. Please retry later.");
         }
     }
+
+    @Override
+    public void assertVerificationAttemptAllowed(final String verificationKey) {
+        String failKey = "auth:verify:fail:" + verificationKey;
+        String failures = redisTemplate.opsForValue().get(failKey);
+        if (failures != null && Long.parseLong(failures) >= authProperties.getSecurity().getOtpRequestLimit()) {
+            throw new RateLimitExceededException("Verification attempt limit exceeded. Please retry later.");
+        }
+    }
+
+    @Override
+    public void recordVerificationFailure(final String verificationKey) {
+        String failKey = "auth:verify:fail:" + verificationKey;
+        Long failures = redisTemplate.opsForValue().increment(failKey);
+        if (failures != null && failures == 1L) {
+            redisTemplate.expire(failKey, Duration.ofMinutes(authProperties.getSecurity().getOtpWindowMinutes()));
+        }
+    }
+
+    @Override
+    public void clearVerificationFailures(final String verificationKey) {
+        redisTemplate.delete("auth:verify:fail:" + verificationKey);
+    }
 }

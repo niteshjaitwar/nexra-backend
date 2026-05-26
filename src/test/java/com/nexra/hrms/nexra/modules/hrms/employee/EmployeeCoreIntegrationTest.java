@@ -269,6 +269,7 @@ class EmployeeCoreIntegrationTest {
             .claim("uid", UUID.randomUUID().toString())
             .claim("tenant", tenantCode)
             .claim("roles", roles)
+            .claim("products", List.of("HRMS"))
             .signWith(key)
             .compact();
     }

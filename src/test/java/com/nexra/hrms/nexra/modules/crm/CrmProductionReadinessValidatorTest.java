@@ -54,7 +54,34 @@ class CrmProductionReadinessValidatorTest {
         when(environment.getProperty("spring.datasource.url", "")).thenReturn("jdbc:mysql://db.internal:3306/nexra");
         when(environment.getProperty("spring.datasource.username")).thenReturn("nexra");
         when(environment.getProperty("spring.datasource.password")).thenReturn("secret");
+        when(environment.getProperty("spring.jpa.open-in-view", "true")).thenReturn("false");
+        when(environment.getProperty("spring.jpa.show-sql", "false")).thenReturn("false");
+        when(environment.getProperty("spring.jpa.hibernate.ddl-auto", "")).thenReturn("validate");
         CrmProductionReadinessValidator validator = new CrmProductionReadinessValidator(environment, properties);
         assertThatCode(() -> validator.run(null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("fails when CRM page size is too large in production")
+    void shouldFailWhenPageSizeTooLargeInProd() {
+        properties.setMaxPageSize(500);
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+
+        CrmProductionReadinessValidator validator = new CrmProductionReadinessValidator(environment, properties);
+        assertThatThrownBy(() -> validator.run(null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("nexra.crm.max-page-size must not exceed 200");
+    }
+
+    @Test
+    @DisplayName("fails when JPA open-in-view is enabled in production")
+    void shouldFailWhenOpenInViewEnabledInProd() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("spring.jpa.open-in-view", "true")).thenReturn("true");
+
+        CrmProductionReadinessValidator validator = new CrmProductionReadinessValidator(environment, properties);
+        assertThatThrownBy(() -> validator.run(null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("spring.jpa.open-in-view must be false");
     }
 }

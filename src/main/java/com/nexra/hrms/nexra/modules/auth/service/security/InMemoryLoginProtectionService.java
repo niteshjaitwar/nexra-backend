@@ -41,6 +41,11 @@ public class InMemoryLoginProtectionService implements LoginProtectionService {
         .maximumSize(50_000)
         .build();
 
+    private final Cache<String, FailureState> verificationFailures = Caffeine.newBuilder()
+        .expireAfterWrite(30, TimeUnit.MINUTES)
+        .maximumSize(50_000)
+        .build();
+
     /**
      * Validates whether the provided login key is currently locked.
      *
@@ -111,6 +116,40 @@ public class InMemoryLoginProtectionService implements LoginProtectionService {
         if (requests > authProperties.getSecurity().getOtpRequestLimit()) {
             throw new RateLimitExceededException("OTP request limit exceeded. Please retry later.");
         }
+    }
+
+    @Override
+    public void assertVerificationAttemptAllowed(final String verificationKey) {
+        FailureState state = verificationFailures.getIfPresent(verificationKey);
+        if (state == null) {
+            return;
+        }
+        if (state.windowStart().plusSeconds((long) authProperties.getSecurity().getOtpWindowMinutes() * 60L)
+            .isBefore(Instant.now())) {
+            verificationFailures.invalidate(verificationKey);
+            return;
+        }
+        if (state.counter().get() >= authProperties.getSecurity().getOtpRequestLimit()) {
+            throw new RateLimitExceededException("Verification attempt limit exceeded. Please retry later.");
+        }
+    }
+
+    @Override
+    public void recordVerificationFailure(final String verificationKey) {
+        FailureState state = verificationFailures.get(verificationKey, key -> new FailureState(Instant.now()));
+        if (state != null && state.windowStart().plusSeconds((long) authProperties.getSecurity().getOtpWindowMinutes() * 60L)
+            .isBefore(Instant.now())) {
+            verificationFailures.put(verificationKey, new FailureState(Instant.now()));
+            state = verificationFailures.getIfPresent(verificationKey);
+        }
+        if (state != null) {
+            state.counter().incrementAndGet();
+        }
+    }
+
+    @Override
+    public void clearVerificationFailures(final String verificationKey) {
+        verificationFailures.invalidate(verificationKey);
     }
 
     /**

@@ -83,6 +83,9 @@ public class CrmLeadServiceImpl implements CrmLeadService {
         entity.setDomainUpdatedAt(now);
         final CrmLeadEntity saved = repository.save(entity);
         log.info("CrmLeadServiceImpl - create() - leadId={}, ownerUserId={}", saved.getId(), saved.getOwnerUserId());
+        auditEventService.record(AuditEventRecord.of(normalizedTenantCode, "CRM", "CREATE_LEAD", "SUCCESS")
+            .withActor(saved.getOwnerUserId(), null)
+            .withTarget("CRM_LEAD", saved.getId()));
         return toModel(saved);
     }
 
@@ -111,6 +114,10 @@ public class CrmLeadServiceImpl implements CrmLeadService {
         entity.setDomainUpdatedAt(Instant.now());
         final CrmLeadEntity saved = repository.save(entity);
         log.info("CrmLeadServiceImpl - update() - leadId={}, status={}", leadId, saved.getStatus());
+        auditEventService.record(AuditEventRecord.of(normalizedTenantCode, "CRM", "UPDATE_LEAD", "SUCCESS")
+            .withActor(saved.getOwnerUserId(), null)
+            .withTarget("CRM_LEAD", saved.getId())
+            .withDetail("{\"status\":\"" + saved.getStatus().name() + "\"}"));
         return toModel(saved);
     }
 
@@ -168,6 +175,9 @@ public class CrmLeadServiceImpl implements CrmLeadService {
             .orElseThrow(() -> new NexraNotFoundException("CRM lead not found for id: " + leadId));
         repository.delete(entity);
         log.info("CrmLeadServiceImpl - delete() - leadId={}", leadId);
+        auditEventService.record(AuditEventRecord.of(normalizedTenantCode, "CRM", "DELETE_LEAD", "SUCCESS")
+            .withActor(entity.getOwnerUserId(), null)
+            .withTarget("CRM_LEAD", leadId));
     }
 
     /**
@@ -335,6 +345,7 @@ public class CrmLeadServiceImpl implements CrmLeadService {
 
         auditEventService.record(
             AuditEventRecord.of(normalizedTenantCode, "CRM", "CONVERT_LEAD", "SUCCESS")
+                .withActor(lead.getOwnerUserId(), null)
                 .withTarget("CRM_LEAD", leadId)
                 .withDetail("{\"accountId\":\"" + accountId + "\",\"contactId\":\"" + contactId + "\",\"dealId\":\"" + dealId + "\"}")
         );

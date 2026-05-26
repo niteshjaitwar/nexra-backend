@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
             .distinct()
             .reduce((left, right) -> left + ", " + right)
             .orElse("Validation failed.");
-        log.error("GlobalExceptionHandler() - handleValidationException() - Validation failed: {}", errors, exception);
+        log.warn("GlobalExceptionHandler() - handleValidationException() - Validation failed: {}", errors);
         return ResponseEntity.badRequest()
             .body(ApiErrorResponseFactory.validation(exception, errors));
     }
@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(final HttpMessageNotReadableException exception) {
-        log.error("GlobalExceptionHandler() - handleHttpMessageNotReadableException() - Invalid request payload: {}", exception.getMessage(), exception);
+        log.warn("GlobalExceptionHandler() - handleHttpMessageNotReadableException() - Invalid request payload: {}", exception.getMessage());
         return ResponseEntity.badRequest().body(ApiResponse.failure("MALFORMED_JSON", "Invalid request payload."));
     }
 
@@ -64,7 +64,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFoundException(final ResourceNotFoundException exception) {
-        log.error("GlobalExceptionHandler() - handleResourceNotFoundException() - Resource missing: {}", exception.getMessage(), exception);
+        log.warn("GlobalExceptionHandler() - handleResourceNotFoundException() - Resource missing: {}", exception.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.failure("NOT_FOUND", exception.getMessage()));
     }
 
@@ -76,7 +76,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnauthorizedException(final UnauthorizedException exception) {
-        log.error("GlobalExceptionHandler() - handleUnauthorizedException() - Unauthorized access: {}", exception.getMessage(), exception);
+        log.warn("GlobalExceptionHandler() - handleUnauthorizedException() - Unauthorized access: {}", exception.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.failure("UNAUTHORIZED", exception.getMessage()));
     }
 
@@ -88,7 +88,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(final BusinessException exception) {
-        log.error("GlobalExceptionHandler() - handleBusinessException() - Business violation: {}", exception.getMessage(), exception);
+        log.warn("GlobalExceptionHandler() - handleBusinessException() - Business violation: {}", exception.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.failure("BUSINESS_RULE_VIOLATION", exception.getMessage()));
     }
 
@@ -112,7 +112,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(final AccessDeniedException exception) {
-        log.error("GlobalExceptionHandler() - handleAccessDeniedException() - Access denied: {}", exception.getMessage(), exception);
+        log.warn("GlobalExceptionHandler() - handleAccessDeniedException() - Access denied: {}", exception.getMessage());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.failure("FORBIDDEN", "Access denied."));
     }
 

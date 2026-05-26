@@ -1,6 +1,8 @@
 package com.nexra.hrms.nexra.modules.crm.service.impl;
 
 import com.nexra.hrms.nexra.common.api.PageResponse;
+import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.common.exception.NexraNotFoundException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
@@ -25,6 +27,7 @@ public class CrmDealServiceImpl implements CrmDealService {
 
     private final CrmDealRepository repository;
     private final CrmProperties properties;
+    private final AuditEventService auditEventService;
 
     @Override
     public CrmDeal create(final String tenantCode, final CrmDealCreateRequest request) {
@@ -39,7 +42,12 @@ public class CrmDealServiceImpl implements CrmDealService {
         entity.setCurrency(normalizeNullable(request.currency()));
         entity.setOwnerUserId(normalize(request.ownerUserId()));
         entity.setExpectedCloseDate(request.expectedCloseDate());
-        return toModel(repository.save(entity));
+        final CrmDealEntity saved = repository.save(entity);
+        auditEventService.record(AuditEventRecord.of(saved.getTenantCode(), "CRM", "CREATE_DEAL", "SUCCESS")
+            .withActor(saved.getOwnerUserId(), null)
+            .withTarget("CRM_DEAL", saved.getId())
+            .withDetail("{\"stage\":\"" + saved.getStage() + "\"}"));
+        return toModel(saved);
     }
 
     @Override
@@ -54,7 +62,12 @@ public class CrmDealServiceImpl implements CrmDealService {
         entity.setCurrency(valueOrDefaultNullable(request.currency(), entity.getCurrency()));
         entity.setOwnerUserId(valueOrDefault(request.ownerUserId(), entity.getOwnerUserId()));
         entity.setExpectedCloseDate(request.expectedCloseDate() != null ? request.expectedCloseDate() : entity.getExpectedCloseDate());
-        return toModel(repository.save(entity));
+        final CrmDealEntity saved = repository.save(entity);
+        auditEventService.record(AuditEventRecord.of(saved.getTenantCode(), "CRM", "UPDATE_DEAL", "SUCCESS")
+            .withActor(saved.getOwnerUserId(), null)
+            .withTarget("CRM_DEAL", saved.getId())
+            .withDetail("{\"stage\":\"" + saved.getStage() + "\"}"));
+        return toModel(saved);
     }
 
     @Override
@@ -77,6 +90,9 @@ public class CrmDealServiceImpl implements CrmDealService {
         final CrmDealEntity entity = repository.findByIdAndTenantCodeIgnoreCase(dealId, normalize(tenantCode))
             .orElseThrow(() -> new NexraNotFoundException("CRM deal not found for id: " + dealId));
         repository.delete(entity);
+        auditEventService.record(AuditEventRecord.of(entity.getTenantCode(), "CRM", "DELETE_DEAL", "SUCCESS")
+            .withActor(entity.getOwnerUserId(), null)
+            .withTarget("CRM_DEAL", dealId));
     }
 
     private void validatePaging(final int page, final int size) {
@@ -124,4 +140,3 @@ public class CrmDealServiceImpl implements CrmDealService {
         );
     }
 }
-

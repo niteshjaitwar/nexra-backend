@@ -34,6 +34,8 @@ class ProductionReadinessValidatorTest {
         when(resource.isReadable()).thenReturn(true);
         when(environment.getProperty("app.auth.bootstrap.enabled", "false")).thenReturn("false");
         when(environment.getProperty("nexra.common.rate-limit.distributed-enabled", "false")).thenReturn("true");
+        when(environment.getProperty("springdoc.api-docs.enabled", "false")).thenReturn("false");
+        when(environment.getProperty("springdoc.swagger-ui.enabled", "false")).thenReturn("false");
         when(environment.getProperty("spring.data.redis.host")).thenReturn("redis.internal");
         when(environment.getProperty("spring.data.redis.port")).thenReturn("6379");
     }
@@ -156,6 +158,30 @@ class ProductionReadinessValidatorTest {
         assertThatThrownBy(() -> validator.run(null))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("must point to an existing keystore resource in prod");
+    }
+
+    @Test
+    @DisplayName("fails when OpenAPI is enabled in production")
+    void shouldFailWhenOpenApiEnabledInProd() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("springdoc.api-docs.enabled", "false")).thenReturn("true");
+
+        ProductionReadinessValidator validator = new ProductionReadinessValidator(environment, properties, resourceLoader);
+        assertThatThrownBy(() -> validator.run(null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("springdoc.api-docs.enabled must be false in prod");
+    }
+
+    @Test
+    @DisplayName("fails when Swagger UI is enabled in production")
+    void shouldFailWhenSwaggerUiEnabledInProd() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
+        when(environment.getProperty("springdoc.swagger-ui.enabled", "false")).thenReturn("true");
+
+        ProductionReadinessValidator validator = new ProductionReadinessValidator(environment, properties, resourceLoader);
+        assertThatThrownBy(() -> validator.run(null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("springdoc.swagger-ui.enabled must be false in prod");
     }
 
     private AuthProperties validProductionProperties() {

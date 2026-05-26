@@ -312,6 +312,57 @@ class AuthSecurityNegativeIntegrationTest {
     }
 
     @Test
+    void shouldRateLimitOtpVerificationFailures() throws Exception {
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        String tenantCode = "verify" + suffix;
+        String email = "verify.limit." + suffix + "@nexra.local";
+
+        mockMvc.perform(post("/api/v1/tenants")
+                .with(user("platform-admin").roles("PLATFORM_ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"code":"%s","name":"Verify Limit Tenant","enterprise":true}
+                    """.formatted(tenantCode)))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"%s",
+                      "email":"%s",
+                      "password":"Password@123",
+                      "firstName":"Verify",
+                      "lastName":"Limit",
+                      "accountType":"ENTERPRISE"
+                    }
+                    """.formatted(tenantCode, email)))
+            .andExpect(status().isOk());
+
+        String invalidOtpVerifyPayload = """
+            {
+              "tenantCode":"%s",
+              "email":"%s",
+              "purpose":"ACCOUNT_VERIFICATION",
+              "otp":"000000"
+            }
+            """.formatted(tenantCode, email);
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mockMvc.perform(post("/api/v1/auth/verification/otp/verify")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(invalidOtpVerifyPayload))
+                .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/api/v1/auth/verification/otp/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidOtpVerifyPayload))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.message").value("Verification attempt limit exceeded. Please retry later."));
+    }
+
+    @Test
     void shouldReturnJsonForUnauthenticatedProtectedEndpoints() throws Exception {
         mockMvc.perform(get("/api/v1/oauth-clients"))
             .andExpect(status().isUnauthorized())

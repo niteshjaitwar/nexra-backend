@@ -57,6 +57,44 @@ class AdminInsightsIntegrationTest {
             .andExpect(status().isForbidden());
     }
 
+    @Test
+    void tenantAdminSummaryIsProductScoped() throws Exception {
+        final String token = bearerToken("ACME", List.of("ROLE_TENANT_ADMIN"), Set.of("HRMS"));
+
+        mockMvc.perform(get("/api/v1/admin/insights/summary")
+                .header("Authorization", "Bearer " + token)
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.employees").exists())
+            .andExpect(jsonPath("$.data.expenseClaims").exists())
+            .andExpect(jsonPath("$.data.crmLeads").doesNotExist())
+            .andExpect(jsonPath("$.data.payrollSlips").doesNotExist());
+    }
+
+    @Test
+    void tenantAdminCannotQueryAuditEventsForUnlicensedProductModule() throws Exception {
+        final String token = bearerToken("ACME", List.of("ROLE_TENANT_ADMIN"), Set.of("HRMS"));
+
+        mockMvc.perform(get("/api/v1/admin/insights/audit-events")
+                .header("Authorization", "Bearer " + token)
+                .param("module", "CRM")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("Admin user does not have access to requested module insights."));
+    }
+
+    @Test
+    void auditEventsRejectInvalidLimit() throws Exception {
+        final String token = bearerToken("ACME", List.of("ROLE_TENANT_ADMIN"), Set.of("HRMS"));
+
+        mockMvc.perform(get("/api/v1/admin/insights/audit-events")
+                .header("Authorization", "Bearer " + token)
+                .param("limit", "201")
+                .accept(MediaType.APPLICATION_JSON))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    }
+
     private String bearerToken(final String tenantCode, final List<String> roles, final Set<String> products) {
         final SecretKey key = Keys.hmacShaKeyFor("test-jwt-secret-test-jwt-secret-test-jwt".getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()
@@ -69,4 +107,3 @@ class AdminInsightsIntegrationTest {
             .compact();
     }
 }
-

@@ -1,1 +1,11 @@
-package com.nexra.hrms.nexra.modules.hrms.recruitment.model; public record RecruitmentSummaryView(String tenantCode,long totalJobs,long openJobs,long totalCandidates,long hiredCandidates,long stageEvents) {}
+package com.nexra.hrms.nexra.modules.hrms.recruitment.model;
+
+public record RecruitmentSummaryView(
+    String tenantCode,
+    long totalJobs,
+    long openJobs,
+    long totalCandidates,
+    long hiredCandidates,
+    long stageEvents
+) {
+}

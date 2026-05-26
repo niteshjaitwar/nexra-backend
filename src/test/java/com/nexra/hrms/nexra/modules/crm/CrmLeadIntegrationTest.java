@@ -60,6 +60,29 @@ class CrmLeadIntegrationTest {
 
         final String leadId = readLeadId(createResponse);
 
+        mockMvc.perform(post("/api/v1/crm/activities")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "leadId":"%s",
+                      "activityType":"CALL",
+                      "notes":"Discovery call completed",
+                      "ownerUserId":"u-1001"
+                    }
+                    """.formatted(leadId)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.leadId").value(leadId))
+            .andExpect(jsonPath("$.data.activityType").value("CALL"));
+
+        mockMvc.perform(get("/api/v1/crm/activities")
+                .header("Authorization", "Bearer " + token)
+                .param("leadId", leadId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totalItems").value(1))
+            .andExpect(jsonPath("$.data.items[0].notes").value("Discovery call completed"));
+
         mockMvc.perform(get("/api/v1/crm/leads")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())

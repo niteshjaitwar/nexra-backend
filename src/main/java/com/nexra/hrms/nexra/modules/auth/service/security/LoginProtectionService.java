@@ -35,4 +35,25 @@ public interface LoginProtectionService {
      * @param requestKey tenant and principal compound key
      */
     void assertOtpRequestAllowed(String requestKey);
+
+    /**
+     * Ensures verification attempts for the provided key are still allowed.
+     *
+     * @param verificationKey tenant, principal, purpose, and verification type compound key
+     */
+    void assertVerificationAttemptAllowed(String verificationKey);
+
+    /**
+     * Records a failed verification attempt.
+     *
+     * @param verificationKey tenant, principal, purpose, and verification type compound key
+     */
+    void recordVerificationFailure(String verificationKey);
+
+    /**
+     * Clears failed verification tracking after successful token validation.
+     *
+     * @param verificationKey tenant, principal, purpose, and verification type compound key
+     */
+    void clearVerificationFailures(String verificationKey);
 }

@@ -19,6 +19,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -276,7 +277,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             .reduce(BigDecimal.ZERO, BigDecimal::add)
             .setScale(2, RoundingMode.HALF_UP);
 
-        Map<String, Object> summary = new java.util.LinkedHashMap<>();
+        Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("tenantCode", normTenant(tenantCode));
         summary.put("employeeId", blankToNull(employeeId));
         summary.put("recordCount", records.size());

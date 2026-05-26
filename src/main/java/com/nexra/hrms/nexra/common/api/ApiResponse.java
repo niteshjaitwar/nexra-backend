@@ -3,6 +3,7 @@ package com.nexra.hrms.nexra.common.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.MDC;
@@ -123,7 +124,7 @@ public record ApiResponse<T>(
      * @return new envelope instance with metadata merged.
      */
     public ApiResponse<T> withMeta(final String key, final Object value) {
-        final Map<String, Object> merged = new java.util.LinkedHashMap<>(meta == null ? Map.of() : meta);
+        final Map<String, Object> merged = new LinkedHashMap<>(meta == null ? Map.of() : meta);
         merged.put(key, value);
         return new ApiResponse<>(success, code, message, data, errors, merged, timestamp);
     }

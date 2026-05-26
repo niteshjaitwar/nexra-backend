@@ -25,8 +25,8 @@ class FlywayMigrationCompatibilityTest {
 
         var current = flyway.info().current();
         assertNotNull(current, "Flyway current version should exist after migration");
-        assertEquals("43", current.getVersion().getVersion(),
-            "Latest schema version should be v43");
+        assertEquals("44", current.getVersion().getVersion(),
+            "Latest schema version should be v44");
     }
 
     @Test
@@ -41,8 +41,8 @@ class FlywayMigrationCompatibilityTest {
 
         var current = upgrade.info().current();
         assertNotNull(current, "Flyway current version should exist after upgrade");
-        assertEquals("43", current.getVersion().getVersion(),
-            "Upgrade path from v42 should land on v43");
+        assertEquals("44", current.getVersion().getVersion(),
+            "Upgrade path from v42 should land on v44");
     }
 
     private Flyway flyway(final String url) {

@@ -10,6 +10,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.GeneralSecurityException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.cert.Certificate;
@@ -149,7 +150,7 @@ public class AuthorizationServerConfig {
                 .privateKey(privateKey)
                 .keyID(UUID.randomUUID().toString())
                 .build();
-        } catch (java.security.GeneralSecurityException exception) {
+        } catch (GeneralSecurityException exception) {
             throw new IllegalStateException("Unable to create RSA key for authorization server", exception);
         }
     }
@@ -190,7 +191,7 @@ public class AuthorizationServerConfig {
                 .privateKey(rsaPrivateKey)
                 .keyID(alias)
                 .build();
-        } catch (IOException | java.security.GeneralSecurityException exception) {
+        } catch (IOException | GeneralSecurityException exception) {
             throw new IllegalStateException("Failed to load OAuth2 signing key from keystore.", exception);
         }
     }

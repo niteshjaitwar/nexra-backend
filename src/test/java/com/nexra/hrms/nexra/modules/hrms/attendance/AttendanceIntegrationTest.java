@@ -171,6 +171,7 @@ class AttendanceIntegrationTest {
             .claim("uid", userId.toString())
             .claim("tenant", tenantCode)
             .claim("roles", roles)
+            .claim("products", List.of("HRMS"))
             .signWith(key)
             .compact();
     }

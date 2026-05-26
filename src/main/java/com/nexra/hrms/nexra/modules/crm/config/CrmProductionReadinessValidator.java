@@ -32,7 +32,13 @@ public class CrmProductionReadinessValidator implements ApplicationRunner {
         assertCondition(properties.isEnabled(), "nexra.crm.enabled must be true in production.");
         assertCondition(properties.isEnforceAuth(), "nexra.crm.enforce-auth must be true in production.");
         assertCondition(properties.getMaxPageSize() > 0, "nexra.crm.max-page-size must be greater than 0.");
-        assertCondition(properties.getMaxPageSize() <= 500, "nexra.crm.max-page-size must not exceed 500.");
+        assertCondition(properties.getMaxPageSize() <= 200, "nexra.crm.max-page-size must not exceed 200.");
+        assertCondition(!Boolean.parseBoolean(environment.getProperty("spring.jpa.open-in-view", "true")),
+            "spring.jpa.open-in-view must be false in production.");
+        assertCondition(!Boolean.parseBoolean(environment.getProperty("spring.jpa.show-sql", "false")),
+            "spring.jpa.show-sql must be false in production.");
+        assertCondition("validate".equalsIgnoreCase(environment.getProperty("spring.jpa.hibernate.ddl-auto", "")),
+            "spring.jpa.hibernate.ddl-auto must be validate in production.");
         assertCondition(hasText(environment.getProperty("spring.datasource.url")), "spring.datasource.url must be configured.");
         assertCondition(!environment.getProperty("spring.datasource.url", "").startsWith("jdbc:h2:"),
             "spring.datasource.url must not use H2 in prod.");

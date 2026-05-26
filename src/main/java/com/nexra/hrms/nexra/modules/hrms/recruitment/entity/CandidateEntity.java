@@ -1,2 +1,90 @@
-package com.nexra.hrms.nexra.modules.hrms.recruitment.entity; import com.nexra.hrms.nexra.modules.hrms.recruitment.entity.base.AbstractAuditableEntity; import jakarta.persistence.*;
-@Entity @Table(name="recruitment_candidates") public class CandidateEntity extends AbstractAuditableEntity { @Id @Column(name="candidate_id",nullable=false,length=36) private String candidateId; @Column(name="tenant_code",nullable=false,length=64) private String tenantCode; @Column(name="job_id",nullable=false,length=36) private String jobId; @Column(name="full_name",nullable=false,length=180) private String fullName; @Column(name="email",length=180) private String email; @Column(name="phone",length=40) private String phone; @Column(name="stage",nullable=false,length=30) private String stage; public String getCandidateId(){return candidateId;} public void setCandidateId(final String v){candidateId=v;} public String getTenantCode(){return tenantCode;} public void setTenantCode(final String v){tenantCode=v;} public String getJobId(){return jobId;} public void setJobId(final String v){jobId=v;} public String getFullName(){return fullName;} public void setFullName(final String v){fullName=v;} public String getEmail(){return email;} public void setEmail(final String v){email=v;} public String getPhone(){return phone;} public void setPhone(final String v){phone=v;} public String getStage(){return stage;} public void setStage(final String v){stage=v;} }
+package com.nexra.hrms.nexra.modules.hrms.recruitment.entity;
+
+import com.nexra.hrms.nexra.modules.hrms.recruitment.entity.base.AbstractAuditableEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "recruitment_candidates")
+public class CandidateEntity extends AbstractAuditableEntity {
+
+    @Id
+    @Column(name = "candidate_id", nullable = false, length = 36)
+    private String candidateId;
+
+    @Column(name = "tenant_code", nullable = false, length = 64)
+    private String tenantCode;
+
+    @Column(name = "job_id", nullable = false, length = 36)
+    private String jobId;
+
+    @Column(name = "full_name", nullable = false, length = 180)
+    private String fullName;
+
+    @Column(name = "email", length = 180)
+    private String email;
+
+    @Column(name = "phone", length = 40)
+    private String phone;
+
+    @Column(name = "stage", nullable = false, length = 30)
+    private String stage;
+
+    public String getCandidateId() {
+        return candidateId;
+    }
+
+    public void setCandidateId(final String candidateId) {
+        this.candidateId = candidateId;
+    }
+
+    public String getTenantCode() {
+        return tenantCode;
+    }
+
+    public void setTenantCode(final String tenantCode) {
+        this.tenantCode = tenantCode;
+    }
+
+    public String getJobId() {
+        return jobId;
+    }
+
+    public void setJobId(final String jobId) {
+        this.jobId = jobId;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(final String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(final String email) {
+        this.email = email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(final String phone) {
+        this.phone = phone;
+    }
+
+    public String getStage() {
+        return stage;
+    }
+
+    public void setStage(final String stage) {
+        this.stage = stage;
+    }
+}
