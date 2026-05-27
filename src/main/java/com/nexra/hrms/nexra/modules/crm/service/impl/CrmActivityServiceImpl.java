@@ -3,6 +3,7 @@ package com.nexra.hrms.nexra.modules.crm.service.impl;
 import com.nexra.hrms.nexra.common.api.PageResponse;
 import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
 import com.nexra.hrms.nexra.common.audit.AuditEventService;
+import com.nexra.hrms.nexra.common.exception.NexraForbiddenException;
 import com.nexra.hrms.nexra.common.exception.NexraNotFoundException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
@@ -14,6 +15,7 @@ import com.nexra.hrms.nexra.modules.crm.repository.CrmContactRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmDealRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmLeadRepository;
 import com.nexra.hrms.nexra.modules.crm.service.CrmActivityService;
+import com.nexra.hrms.nexra.modules.crm.support.CrmAccessScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,12 +41,17 @@ public class CrmActivityServiceImpl implements CrmActivityService {
     private final AuditEventService auditEventService;
 
     @Override
-    public CrmActivity create(final String tenantCode, final CrmActivityCreateRequest request) {
+    public CrmActivity create(
+        final String tenantCode,
+        final CrmActivityCreateRequest request,
+        final CrmAccessScope accessScope
+    ) {
         final String tenant = normalize(tenantCode);
         final String activityType = normalize(request.activityType()).toUpperCase(Locale.ROOT);
         if (!USER_ACTIVITY_TYPES.contains(activityType)) {
             throw new NexraValidationException("Unsupported CRM activity type.");
         }
+        enforceOwnerAccess(accessScope, request.ownerUserId());
         validateLinkedRecord(tenant, request);
 
         final CrmActivityEntity entity = new CrmActivityEntity();
@@ -73,25 +80,39 @@ public class CrmActivityServiceImpl implements CrmActivityService {
         final String contactId,
         final String dealId,
         final int page,
-        final int size
+        final int size,
+        final CrmAccessScope accessScope
     ) {
         final String tenant = normalize(tenantCode);
         validatePaging(page, size);
         validateAtMostOneFilter(leadId, contactId, dealId);
 
         final PageRequest pageRequest = PageRequest.of(page, size);
+        final String actorUserId = accessScope.privileged() ? null : requireActorUserId(accessScope);
         final Page<CrmActivityEntity> result;
         if (hasText(leadId)) {
-            result = activityRepository.findAllByTenantCodeIgnoreCaseAndLeadIdOrderByOccurredAtDescIdDesc(
-                tenant, leadId.trim(), pageRequest);
+            result = accessScope.privileged()
+                ? activityRepository.findAllByTenantCodeIgnoreCaseAndLeadIdOrderByOccurredAtDescIdDesc(
+                    tenant, leadId.trim(), pageRequest)
+                : activityRepository.findAllByTenantCodeIgnoreCaseAndOwnerUserIdAndLeadIdOrderByOccurredAtDescIdDesc(
+                    tenant, actorUserId, leadId.trim(), pageRequest);
         } else if (hasText(contactId)) {
-            result = activityRepository.findAllByTenantCodeIgnoreCaseAndContactIdOrderByOccurredAtDescIdDesc(
-                tenant, contactId.trim(), pageRequest);
+            result = accessScope.privileged()
+                ? activityRepository.findAllByTenantCodeIgnoreCaseAndContactIdOrderByOccurredAtDescIdDesc(
+                    tenant, contactId.trim(), pageRequest)
+                : activityRepository.findAllByTenantCodeIgnoreCaseAndOwnerUserIdAndContactIdOrderByOccurredAtDescIdDesc(
+                    tenant, actorUserId, contactId.trim(), pageRequest);
         } else if (hasText(dealId)) {
-            result = activityRepository.findAllByTenantCodeIgnoreCaseAndDealIdOrderByOccurredAtDescIdDesc(
-                tenant, dealId.trim(), pageRequest);
+            result = accessScope.privileged()
+                ? activityRepository.findAllByTenantCodeIgnoreCaseAndDealIdOrderByOccurredAtDescIdDesc(
+                    tenant, dealId.trim(), pageRequest)
+                : activityRepository.findAllByTenantCodeIgnoreCaseAndOwnerUserIdAndDealIdOrderByOccurredAtDescIdDesc(
+                    tenant, actorUserId, dealId.trim(), pageRequest);
         } else {
-            result = activityRepository.findAllByTenantCodeIgnoreCaseOrderByOccurredAtDescIdDesc(tenant, pageRequest);
+            result = accessScope.privileged()
+                ? activityRepository.findAllByTenantCodeIgnoreCaseOrderByOccurredAtDescIdDesc(tenant, pageRequest)
+                : activityRepository.findAllByTenantCodeIgnoreCaseAndOwnerUserIdOrderByOccurredAtDescIdDesc(
+                    tenant, actorUserId, pageRequest);
         }
 
         final List<CrmActivity> items = result.getContent().stream().map(this::toModel).toList();
@@ -167,5 +188,24 @@ public class CrmActivityServiceImpl implements CrmActivityService {
 
     private boolean hasText(final String value) {
         return value != null && !value.isBlank();
+    }
+
+    private void enforceOwnerAccess(final CrmAccessScope accessScope, final String targetOwnerUserId) {
+        if (accessScope.privileged()) {
+            return;
+        }
+        final String actorUserId = requireActorUserId(accessScope);
+        final String targetOwner = normalize(targetOwnerUserId);
+        if (actorUserId.equals(targetOwner)) {
+            return;
+        }
+        throw new NexraForbiddenException("Non-admin CRM users can only operate on their own owned records.");
+    }
+
+    private String requireActorUserId(final CrmAccessScope accessScope) {
+        if (accessScope.actorUserId() == null || accessScope.actorUserId().isBlank()) {
+            throw new NexraForbiddenException("Authenticated CRM user is missing actor identity.");
+        }
+        return accessScope.actorUserId().trim();
     }
 }

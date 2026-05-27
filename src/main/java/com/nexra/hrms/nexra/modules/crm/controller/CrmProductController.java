@@ -1,14 +1,12 @@
 package com.nexra.hrms.nexra.modules.crm.controller;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
-import com.nexra.hrms.nexra.common.exception.NexraForbiddenException;
-import com.nexra.hrms.nexra.common.exception.NexraUnauthorizedException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
-import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLeadStatus;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmDealRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmLeadRepository;
+import com.nexra.hrms.nexra.modules.crm.support.CrmRequestContextResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,9 +16,6 @@ import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,6 +41,7 @@ public class CrmProductController {
     private final CrmLeadRepository crmLeadRepository;
     private final CrmDealRepository crmDealRepository;
     private final CrmProperties crmProperties;
+    private final CrmRequestContextResolver requestContextResolver;
 
     @Operation(summary = "Get CRM pipeline snapshot", description = "Returns tenant-scoped CRM pipeline summary for a supported CRM module.")
     @ApiResponses({
@@ -79,25 +75,7 @@ public class CrmProductController {
     }
 
     private String resolveTenantCode() {
-        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof JwtPrincipal principal) {
-            requireCrmProductScope(principal);
-            if (!StringUtils.hasText(principal.tenantCode())) {
-                throw new NexraUnauthorizedException("Authenticated CRM user is missing tenant context.");
-            }
-            return principal.tenantCode().trim();
-        }
-        if (!crmProperties.isEnforceAuth()) {
-            return "nexra";
-        }
-        throw new NexraUnauthorizedException("Authentication is required.");
-    }
-
-    private void requireCrmProductScope(final JwtPrincipal principal) {
-        if (principal.products().contains("CRM")) {
-            return;
-        }
-        throw new NexraForbiddenException("User does not have CRM product access.");
+        return requestContextResolver.resolveTenantCode(crmProperties);
     }
 
     private void validateModuleKey(final String moduleKey) {

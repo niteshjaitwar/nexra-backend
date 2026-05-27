@@ -14,6 +14,7 @@ public class CrmProperties {
     private boolean enabled = true;
     private int maxPageSize = 100;
     private boolean enforceAuth = true;
+    private final Webhook webhook = new Webhook();
 
     /**
      * Returns whether CRM APIs are enabled.
@@ -67,5 +68,31 @@ public class CrmProperties {
      */
     public void setEnforceAuth(final boolean enforceAuth) {
         this.enforceAuth = enforceAuth;
+    }
+
+    public Webhook getWebhook() {
+        return webhook;
+    }
+
+    public static class Webhook {
+
+        private int deadLetterAlertThreshold = 10;
+        private int retryingAlertThreshold = 50;
+
+        public int getDeadLetterAlertThreshold() {
+            return deadLetterAlertThreshold;
+        }
+
+        public void setDeadLetterAlertThreshold(final int deadLetterAlertThreshold) {
+            this.deadLetterAlertThreshold = deadLetterAlertThreshold;
+        }
+
+        public int getRetryingAlertThreshold() {
+            return retryingAlertThreshold;
+        }
+
+        public void setRetryingAlertThreshold(final int retryingAlertThreshold) {
+            this.retryingAlertThreshold = retryingAlertThreshold;
+        }
     }
 }

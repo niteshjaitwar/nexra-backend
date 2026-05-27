@@ -185,11 +185,96 @@ class CrmLeadIntegrationTest {
             .andExpect(jsonPath("$.success").value(false));
     }
 
+    @Test
+    void nonPrivilegedUsersAreOwnerScopedWithinSameTenant() throws Exception {
+        final String ownerId = UUID.randomUUID().toString();
+        final String otherUserId = UUID.randomUUID().toString();
+        final String adminToken = bearerTokenWithUid("ACME", ownerId, List.of("ROLE_CRM_ADMIN"), Set.of("CRM"));
+        final String salesRepToken = bearerTokenWithUid("ACME", otherUserId, List.of("ROLE_USER"), Set.of("CRM"));
+
+        final String createResponse = mockMvc.perform(post("/api/v1/crm/leads")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "fullName":"Scoped Lead",
+                      "email":"scoped.lead@acme.test",
+                      "phone":"+91-9222222222",
+                      "company":"Acme Corp",
+                      "source":"Email",
+                      "ownerUserId":"%s",
+                      "notes":"Owner-only visibility"
+                    }
+                    """.formatted(ownerId)))
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+        final String leadId = readLeadId(createResponse);
+
+        mockMvc.perform(get("/api/v1/crm/leads/{leadId}", leadId)
+                .header("Authorization", "Bearer " + salesRepToken))
+            .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/v1/crm/leads")
+                .header("Authorization", "Bearer " + salesRepToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totalItems").value(0));
+
+        mockMvc.perform(put("/api/v1/crm/leads/{leadId}", leadId)
+                .header("Authorization", "Bearer " + salesRepToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "notes":"Unauthorized update attempt"
+                    }
+                    """))
+            .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/v1/crm/leads/{leadId}", leadId)
+                .header("Authorization", "Bearer " + salesRepToken))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void nonPrivilegedUsersCannotCreateLeadForAnotherOwner() throws Exception {
+        final String actorUserId = UUID.randomUUID().toString();
+        final String differentOwnerId = UUID.randomUUID().toString();
+        final String salesRepToken = bearerTokenWithUid("ACME", actorUserId, List.of("ROLE_USER"), Set.of("CRM"));
+
+        mockMvc.perform(post("/api/v1/crm/leads")
+                .header("Authorization", "Bearer " + salesRepToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "fullName":"Invalid Owner Lead",
+                      "email":"invalid.owner@acme.test",
+                      "phone":"+91-9333333333",
+                      "company":"Acme Corp",
+                      "source":"Phone",
+                      "ownerUserId":"%s",
+                      "notes":"Should be blocked"
+                    }
+                    """.formatted(differentOwnerId)))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("Non-admin CRM users can only operate on their own owned records."));
+    }
+
     private String bearerToken(final String tenantCode, final List<String> roles, final Set<String> products) {
+        return bearerTokenWithUid(tenantCode, UUID.randomUUID().toString(), roles, products);
+    }
+
+    private String bearerTokenWithUid(
+        final String tenantCode,
+        final String uid,
+        final List<String> roles,
+        final Set<String> products
+    ) {
         final SecretKey key = Keys.hmacShaKeyFor("test-jwt-secret-test-jwt-secret-test-jwt".getBytes(StandardCharsets.UTF_8));
         return Jwts.builder()
             .subject("crm-admin@nexra.test")
-            .claim("uid", UUID.randomUUID().toString())
+            .claim("uid", uid)
             .claim("tenant", tenantCode)
             .claim("roles", roles)
             .claim("products", products)

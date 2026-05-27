@@ -3,6 +3,7 @@ package com.nexra.hrms.nexra.modules.crm.service.impl;
 import com.nexra.hrms.nexra.common.api.PageResponse;
 import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
 import com.nexra.hrms.nexra.common.audit.AuditEventService;
+import com.nexra.hrms.nexra.common.exception.NexraForbiddenException;
 import com.nexra.hrms.nexra.common.exception.NexraNotFoundException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
@@ -12,6 +13,7 @@ import com.nexra.hrms.nexra.modules.crm.entity.CrmAccountEntity;
 import com.nexra.hrms.nexra.modules.crm.model.CrmAccount;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmAccountRepository;
 import com.nexra.hrms.nexra.modules.crm.service.CrmAccountService;
+import com.nexra.hrms.nexra.modules.crm.support.CrmAccessScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,7 +31,8 @@ public class CrmAccountServiceImpl implements CrmAccountService {
     private final AuditEventService auditEventService;
 
     @Override
-    public CrmAccount create(final String tenantCode, final CrmAccountCreateRequest request) {
+    public CrmAccount create(final String tenantCode, final CrmAccountCreateRequest request, final CrmAccessScope accessScope) {
+        enforceOwnerAccess(accessScope, request.ownerUserId());
         final CrmAccountEntity entity = new CrmAccountEntity();
         entity.setId(UUID.randomUUID().toString());
         entity.setTenantCode(normalize(tenantCode));
@@ -45,9 +48,18 @@ public class CrmAccountServiceImpl implements CrmAccountService {
     }
 
     @Override
-    public CrmAccount update(final String tenantCode, final String accountId, final CrmAccountUpdateRequest request) {
+    public CrmAccount update(
+        final String tenantCode,
+        final String accountId,
+        final CrmAccountUpdateRequest request,
+        final CrmAccessScope accessScope
+    ) {
         final CrmAccountEntity entity = repository.findByIdAndTenantCodeIgnoreCase(accountId, normalize(tenantCode))
             .orElseThrow(() -> new NexraNotFoundException("CRM account not found for id: " + accountId));
+        ensureVisibleForAccessScope(entity, accessScope, accountId);
+        if (request.ownerUserId() != null) {
+            enforceOwnerAccess(accessScope, request.ownerUserId());
+        }
         entity.setName(valueOrDefault(request.name(), entity.getName()));
         entity.setWebsite(valueOrDefaultNullable(request.website(), entity.getWebsite()));
         entity.setIndustry(valueOrDefaultNullable(request.industry(), entity.getIndustry()));
@@ -60,24 +72,33 @@ public class CrmAccountServiceImpl implements CrmAccountService {
     }
 
     @Override
-    public CrmAccount findById(final String tenantCode, final String accountId) {
-        return toModel(repository.findByIdAndTenantCodeIgnoreCase(accountId, normalize(tenantCode))
-            .orElseThrow(() -> new NexraNotFoundException("CRM account not found for id: " + accountId)));
+    public CrmAccount findById(final String tenantCode, final String accountId, final CrmAccessScope accessScope) {
+        final CrmAccountEntity entity = repository.findByIdAndTenantCodeIgnoreCase(accountId, normalize(tenantCode))
+            .orElseThrow(() -> new NexraNotFoundException("CRM account not found for id: " + accountId));
+        ensureVisibleForAccessScope(entity, accessScope, accountId);
+        return toModel(entity);
     }
 
     @Override
-    public PageResponse<CrmAccount> list(final String tenantCode, final int page, final int size) {
+    public PageResponse<CrmAccount> list(final String tenantCode, final int page, final int size, final CrmAccessScope accessScope) {
         validatePaging(page, size);
-        final Page<CrmAccountEntity> result = repository.findAllByTenantCodeIgnoreCaseOrderByUpdatedAtDescIdDesc(
-            normalize(tenantCode), PageRequest.of(page, size));
+        final String normalizedTenantCode = normalize(tenantCode);
+        final Page<CrmAccountEntity> result = accessScope.privileged()
+            ? repository.findAllByTenantCodeIgnoreCaseOrderByUpdatedAtDescIdDesc(normalizedTenantCode, PageRequest.of(page, size))
+            : repository.findAllByTenantCodeIgnoreCaseAndOwnerUserIdOrderByUpdatedAtDescIdDesc(
+                normalizedTenantCode,
+                requireActorUserId(accessScope),
+                PageRequest.of(page, size)
+            );
         final List<CrmAccount> items = result.getContent().stream().map(this::toModel).toList();
         return new PageResponse<>(items, result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages(), result.hasNext(), result.hasPrevious());
     }
 
     @Override
-    public void delete(final String tenantCode, final String accountId) {
+    public void delete(final String tenantCode, final String accountId, final CrmAccessScope accessScope) {
         final CrmAccountEntity entity = repository.findByIdAndTenantCodeIgnoreCase(accountId, normalize(tenantCode))
             .orElseThrow(() -> new NexraNotFoundException("CRM account not found for id: " + accountId));
+        ensureVisibleForAccessScope(entity, accessScope, accountId);
         repository.delete(entity);
         auditEventService.record(AuditEventRecord.of(entity.getTenantCode(), "CRM", "DELETE_ACCOUNT", "SUCCESS")
             .withActor(entity.getOwnerUserId(), null)
@@ -123,5 +144,35 @@ public class CrmAccountServiceImpl implements CrmAccountService {
             entity.getCreatedAt(),
             entity.getUpdatedAt()
         );
+    }
+
+    private void ensureVisibleForAccessScope(final CrmAccountEntity entity, final CrmAccessScope accessScope, final String accountId) {
+        if (accessScope.privileged()) {
+            return;
+        }
+        final String actorUserId = requireActorUserId(accessScope);
+        if (actorUserId.equals(entity.getOwnerUserId())) {
+            return;
+        }
+        throw new NexraNotFoundException("CRM account not found for id: " + accountId);
+    }
+
+    private void enforceOwnerAccess(final CrmAccessScope accessScope, final String targetOwnerUserId) {
+        if (accessScope.privileged()) {
+            return;
+        }
+        final String actorUserId = requireActorUserId(accessScope);
+        final String targetOwner = normalize(targetOwnerUserId);
+        if (actorUserId.equals(targetOwner)) {
+            return;
+        }
+        throw new NexraForbiddenException("Non-admin CRM users can only operate on their own owned records.");
+    }
+
+    private String requireActorUserId(final CrmAccessScope accessScope) {
+        if (accessScope.actorUserId() == null || accessScope.actorUserId().isBlank()) {
+            throw new NexraForbiddenException("Authenticated CRM user is missing actor identity.");
+        }
+        return accessScope.actorUserId().trim();
     }
 }

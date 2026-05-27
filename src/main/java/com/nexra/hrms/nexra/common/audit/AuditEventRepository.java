@@ -42,6 +42,22 @@ public interface AuditEventRepository extends JpaRepository<AuditEventEntity, Lo
         @Param("limit") int limit
     );
 
+    @Query(value = """
+        SELECT *
+        FROM audit_events
+        WHERE tenant_code = :tenantCode
+          AND module = :module
+          AND action = :action
+        ORDER BY created_at DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<AuditEventEntity> findByTenantModuleAndAction(
+        @Param("tenantCode") String tenantCode,
+        @Param("module") String module,
+        @Param("action") String action,
+        @Param("limit") int limit
+    );
+
     /**
      * Returns audit events for a specific actor within a tenant.
      *

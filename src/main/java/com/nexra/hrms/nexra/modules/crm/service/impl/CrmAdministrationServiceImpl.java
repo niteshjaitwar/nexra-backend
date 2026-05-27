@@ -1,30 +1,44 @@
 package com.nexra.hrms.nexra.modules.crm.service.impl;
 
 import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
+import com.nexra.hrms.nexra.common.audit.AuditEventRepository;
 import com.nexra.hrms.nexra.common.audit.AuditEventService;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
+import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmCustomFieldDefinitionRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmRecordSharingRuleRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmWorkflowRuleRequest;
+import com.nexra.hrms.nexra.modules.crm.dto.request.IntegrationWebhookSignatureVerificationRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.IntegrationWebhookSubscriptionRequest;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmCustomFieldDefinitionEntity;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmRecordSharingRuleEntity;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmWorkflowRuleEntity;
+import com.nexra.hrms.nexra.modules.crm.entity.IntegrationWebhookDeliveryEntity;
+import com.nexra.hrms.nexra.modules.crm.entity.IntegrationWebhookDeliveryStatus;
 import com.nexra.hrms.nexra.modules.crm.entity.IntegrationWebhookSubscriptionEntity;
 import com.nexra.hrms.nexra.modules.crm.model.CrmCustomFieldDefinition;
 import com.nexra.hrms.nexra.modules.crm.model.CrmRecordSharingRule;
 import com.nexra.hrms.nexra.modules.crm.model.CrmWorkflowRule;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookDeliveryAlertStatus;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookDelivery;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookDeliveryMetrics;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookReplayAuditView;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookSignatureVerification;
 import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookSubscription;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmCustomFieldDefinitionRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmRecordSharingRuleRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmWorkflowRuleRepository;
+import com.nexra.hrms.nexra.modules.crm.repository.IntegrationWebhookDeliveryRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.IntegrationWebhookSubscriptionRepository;
 import com.nexra.hrms.nexra.modules.crm.service.CrmAdministrationService;
+import com.nexra.hrms.nexra.modules.crm.support.CrmWebhookSignatureCodec;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -65,11 +79,16 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
     private static final Set<String> TRIGGER_EVENTS = Set.of("RECORD_CREATED", "RECORD_UPDATED", "RECORD_DELETED", "DATE_REACHED");
     private static final Set<String> PRINCIPAL_TYPES = Set.of("ROLE", "GROUP", "USER", "OWNER_MANAGER");
     private static final Set<String> ACCESS_LEVELS = Set.of("READ", "EDIT");
+    private static final long REPLAY_COOLDOWN_SECONDS = 30;
 
+    private final CrmProperties crmProperties;
     private final CrmCustomFieldDefinitionRepository customFieldRepository;
     private final CrmWorkflowRuleRepository workflowRuleRepository;
     private final CrmRecordSharingRuleRepository recordSharingRuleRepository;
     private final IntegrationWebhookSubscriptionRepository webhookRepository;
+    private final IntegrationWebhookDeliveryRepository webhookDeliveryRepository;
+    private final CrmWebhookDeliveryService webhookDeliveryService;
+    private final AuditEventRepository auditEventRepository;
     private final AuditEventService auditEventService;
 
     @Override
@@ -212,9 +231,13 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
         entity.setProductKey("CRM");
         entity.setEventType(eventType);
         entity.setTargetUrl(uri.toString());
-        entity.setSecretHash(sha256Hex(request.secret()));
+        entity.setSecretHash(CrmWebhookSignatureCodec.secretHash(request.secret()));
         entity.setActive(request.active());
         final IntegrationWebhookSubscriptionEntity saved = webhookRepository.save(entity);
+        webhookDeliveryService.enqueueForSubscription(
+            saved,
+            "{\"type\":\"WEBHOOK_SUBSCRIPTION_CREATED\",\"subscriptionId\":\"" + saved.getId() + "\"}"
+        );
         auditEventService.record(AuditEventRecord.of(tenant, "CRM", "CREATE_WEBHOOK_SUBSCRIPTION", "SUCCESS")
             .withActor(actorEmail, actorUserId)
             .withTarget("INTEGRATION_WEBHOOK", saved.getId())
@@ -231,6 +254,116 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
             .toList();
     }
 
+    @Override
+    public List<IntegrationWebhookDelivery> listWebhookDeliveries(final String tenantCode) {
+        final String tenant = normalizeTenant(tenantCode);
+        return webhookDeliveryRepository.findTop100ByTenantCodeIgnoreCaseOrderByCreatedAtDesc(tenant)
+            .stream()
+            .map(this::toModel)
+            .toList();
+    }
+
+    @Override
+    public IntegrationWebhookDelivery replayWebhookDelivery(
+        final String tenantCode,
+        final String actorEmail,
+        final String actorUserId,
+        final String deliveryId
+    ) {
+        final String tenant = normalizeTenant(tenantCode);
+        final IntegrationWebhookDeliveryEntity delivery = webhookDeliveryRepository.findByIdAndTenantCodeIgnoreCase(
+                normalize(deliveryId),
+                tenant
+            )
+            .orElseThrow(() -> new NexraValidationException("Webhook delivery not found for replay."));
+        if (delivery.getStatus() != IntegrationWebhookDeliveryStatus.DEAD_LETTER) {
+            throw new NexraValidationException("Only dead-letter webhook deliveries can be replayed.");
+        }
+        if (delivery.getLastFailureAt() != null
+            && delivery.getLastFailureAt().isAfter(Instant.now().minus(REPLAY_COOLDOWN_SECONDS, ChronoUnit.SECONDS))) {
+            throw new NexraValidationException("Webhook delivery replay is cooling down. Retry after a short delay.");
+        }
+
+        delivery.setStatus(IntegrationWebhookDeliveryStatus.PENDING);
+        delivery.setAttemptCount(0);
+        delivery.setNextAttemptAt(Instant.now());
+        delivery.setDeliveredAt(null);
+        delivery.setLastStatusCode(null);
+        delivery.setLastError(null);
+        final IntegrationWebhookDeliveryEntity saved = webhookDeliveryRepository.save(delivery);
+        auditEventService.record(AuditEventRecord.of(tenant, "CRM", "REPLAY_WEBHOOK_DELIVERY", "SUCCESS")
+            .withActor(actorEmail, actorUserId)
+            .withTarget("INTEGRATION_WEBHOOK_DELIVERY", saved.getId()));
+        return toModel(saved);
+    }
+
+    @Override
+    public IntegrationWebhookDeliveryMetrics getWebhookDeliveryMetrics(final String tenantCode) {
+        final String tenant = normalizeTenant(tenantCode);
+        final long pending = webhookDeliveryRepository.countByTenantCodeIgnoreCaseAndStatus(tenant, IntegrationWebhookDeliveryStatus.PENDING);
+        final long retrying = webhookDeliveryRepository.countByTenantCodeIgnoreCaseAndStatus(tenant, IntegrationWebhookDeliveryStatus.RETRYING);
+        final long succeeded = webhookDeliveryRepository.countByTenantCodeIgnoreCaseAndStatus(tenant, IntegrationWebhookDeliveryStatus.SUCCEEDED);
+        final long deadLetter = webhookDeliveryRepository.countByTenantCodeIgnoreCaseAndStatus(tenant, IntegrationWebhookDeliveryStatus.DEAD_LETTER);
+        return new IntegrationWebhookDeliveryMetrics(
+            pending,
+            retrying,
+            succeeded,
+            deadLetter,
+            pending + retrying + succeeded + deadLetter
+        );
+    }
+
+    @Override
+    public IntegrationWebhookDeliveryAlertStatus getWebhookDeliveryAlertStatus(final String tenantCode) {
+        final String tenant = normalizeTenant(tenantCode);
+        final long retrying = webhookDeliveryRepository.countByTenantCodeIgnoreCaseAndStatus(tenant, IntegrationWebhookDeliveryStatus.RETRYING);
+        final long deadLetter = webhookDeliveryRepository.countByTenantCodeIgnoreCaseAndStatus(tenant, IntegrationWebhookDeliveryStatus.DEAD_LETTER);
+        final int retryingThreshold = crmProperties.getWebhook().getRetryingAlertThreshold();
+        final int deadLetterThreshold = crmProperties.getWebhook().getDeadLetterAlertThreshold();
+        return new IntegrationWebhookDeliveryAlertStatus(
+            retrying,
+            retryingThreshold,
+            retrying >= retryingThreshold,
+            deadLetter,
+            deadLetterThreshold,
+            deadLetter >= deadLetterThreshold
+        );
+    }
+
+    @Override
+    public List<IntegrationWebhookReplayAuditView> listWebhookReplayAudits(final String tenantCode, final int limit) {
+        final String tenant = normalizeTenant(tenantCode);
+        if (limit <= 0 || limit > 200) {
+            throw new NexraValidationException("Replay audit limit must be between 1 and 200.");
+        }
+        return auditEventRepository.findByTenantModuleAndAction(tenant, "CRM", "REPLAY_WEBHOOK_DELIVERY", limit)
+            .stream()
+            .map(event -> new IntegrationWebhookReplayAuditView(
+                event.getCreatedAt(),
+                event.getActorEmail(),
+                event.getActorUserId(),
+                event.getTargetId(),
+                event.getOutcome()
+            ))
+            .toList();
+    }
+
+    @Override
+    public IntegrationWebhookSignatureVerification verifyWebhookSignature(
+        final String tenantCode,
+        final IntegrationWebhookSignatureVerificationRequest request
+    ) {
+        normalizeTenant(tenantCode);
+        final String expected = CrmWebhookSignatureCodec.buildSignature(
+            CrmWebhookSignatureCodec.secretHash(request.secret()),
+            normalize(request.payloadJson()),
+            normalize(request.idempotencyKey()),
+            normalize(request.timestamp())
+        );
+        final boolean valid = CrmWebhookSignatureCodec.matches(expected, normalize(request.signature()));
+        return new IntegrationWebhookSignatureVerification(valid, CrmWebhookSignatureCodec.SIGNATURE_ALGORITHM);
+    }
+
     private URI validateWebhookUrl(final String targetUrl) {
         try {
             final URI uri = new URI(normalize(targetUrl));
@@ -238,9 +371,15 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
             if (!Set.of("http", "https").contains(scheme) || uri.getHost() == null || uri.getUserInfo() != null) {
                 throw new NexraValidationException("Webhook targetUrl must be an http or https URL without embedded credentials.");
             }
+            if (uri.getFragment() != null) {
+                throw new NexraValidationException("Webhook targetUrl must not include URL fragments.");
+            }
             final int port = uri.getPort();
             if (port != -1 && port != 80 && port != 443) {
                 throw new NexraValidationException("Webhook targetUrl may only use port 80 or 443.");
+            }
+            if (isForbiddenWebhookHost(uri.getHost())) {
+                throw new NexraValidationException("Webhook targetUrl host is not allowed.");
             }
             return uri;
         } catch (URISyntaxException ex) {
@@ -248,12 +387,31 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
         }
     }
 
-    private String sha256Hex(final String value) {
+    private boolean isForbiddenWebhookHost(final String host) {
+        final String normalized = host.toLowerCase(Locale.ROOT).trim();
+        if (normalized.equals("localhost") || normalized.endsWith(".localhost")) {
+            return true;
+        }
+        if (normalized.equals("0.0.0.0") || normalized.equals("127.0.0.1") || normalized.equals("::1")) {
+            return true;
+        }
+        if (normalized.startsWith("fc") || normalized.startsWith("fd")) {
+            return true;
+        }
+        final String[] parts = normalized.split("\\.");
+        if (parts.length != 4) {
+            return false;
+        }
         try {
-            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 digest is unavailable.", ex);
+            final int a = Integer.parseInt(parts[0]);
+            final int b = Integer.parseInt(parts[1]);
+            return a == 10
+                || (a == 192 && b == 168)
+                || (a == 169 && b == 254)
+                || (a == 127)
+                || (a == 172 && b >= 16 && b <= 31);
+        } catch (NumberFormatException ex) {
+            return false;
         }
     }
 
@@ -338,6 +496,24 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
             entity.getId(), entity.getTenantCode(), entity.getProductKey(), entity.getEventType(), entity.getTargetUrl(),
             entity.isActive(), entity.getFailureCount(), entity.getLastSuccessAt(), entity.getLastFailureAt(),
             entity.getCreatedAt(), entity.getUpdatedAt()
+        );
+    }
+
+    private IntegrationWebhookDelivery toModel(final IntegrationWebhookDeliveryEntity entity) {
+        return new IntegrationWebhookDelivery(
+            entity.getId(),
+            entity.getSubscription().getId(),
+            entity.getEventType(),
+            entity.getStatus().name(),
+            entity.getAttemptCount(),
+            entity.getMaxAttempts(),
+            entity.getNextAttemptAt(),
+            entity.getDeliveredAt(),
+            entity.getLastFailureAt(),
+            entity.getLastStatusCode(),
+            entity.getLastError(),
+            entity.getCreatedAt(),
+            entity.getUpdatedAt()
         );
     }
 }

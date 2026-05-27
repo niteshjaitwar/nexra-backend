@@ -12,6 +12,11 @@ public interface CrmAccountRepository extends JpaRepository<CrmAccountEntity, St
     Optional<CrmAccountEntity> findByIdAndTenantCodeIgnoreCase(String id, String tenantCode);
 
     Page<CrmAccountEntity> findAllByTenantCodeIgnoreCaseOrderByUpdatedAtDescIdDesc(String tenantCode, Pageable pageable);
+    Page<CrmAccountEntity> findAllByTenantCodeIgnoreCaseAndOwnerUserIdOrderByUpdatedAtDescIdDesc(
+        String tenantCode,
+        String ownerUserId,
+        Pageable pageable
+    );
 
     long countByTenantCodeIgnoreCase(String tenantCode);
 }

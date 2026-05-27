@@ -2,23 +2,19 @@ package com.nexra.hrms.nexra.modules.crm.controller;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.common.api.PageResponse;
-import com.nexra.hrms.nexra.common.exception.NexraForbiddenException;
-import com.nexra.hrms.nexra.common.exception.NexraUnauthorizedException;
-import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmAccountCreateRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmAccountUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.model.CrmAccount;
 import com.nexra.hrms.nexra.modules.crm.service.CrmAccountService;
+import com.nexra.hrms.nexra.modules.crm.support.CrmAccessScope;
+import com.nexra.hrms.nexra.modules.crm.support.CrmRequestContextResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,6 +33,7 @@ public class CrmAccountController {
 
     private final CrmAccountService service;
     private final CrmProperties properties;
+    private final CrmRequestContextResolver requestContextResolver;
 
     @Operation(summary = "Create CRM account")
     @ApiResponses({
@@ -47,7 +44,10 @@ public class CrmAccountController {
     })
     @PostMapping
     public ResponseEntity<ApiResponse<CrmAccount>> create(@Valid @RequestBody final CrmAccountCreateRequest request) {
-        return ResponseEntity.status(201).body(ApiResponse.created(service.create(resolveTenantCode(), request), "CRM account created successfully."));
+        return ResponseEntity.status(201).body(ApiResponse.created(
+            service.create(resolveTenantCode(), request, resolveCrmAccessScope()),
+            "CRM account created successfully."
+        ));
     }
 
     @Operation(summary = "Get CRM account")
@@ -59,7 +59,10 @@ public class CrmAccountController {
     })
     @GetMapping("/{accountId}")
     public ResponseEntity<ApiResponse<CrmAccount>> getById(@PathVariable final String accountId) {
-        return ResponseEntity.ok(ApiResponse.ok(service.findById(resolveTenantCode(), accountId), "CRM account fetched successfully."));
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.findById(resolveTenantCode(), accountId, resolveCrmAccessScope()),
+            "CRM account fetched successfully."
+        ));
     }
 
     @Operation(summary = "List CRM accounts")
@@ -74,7 +77,10 @@ public class CrmAccountController {
         @RequestParam(defaultValue = "0") final int page,
         @RequestParam(defaultValue = "20") final int size
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(service.list(resolveTenantCode(), page, size), "CRM accounts listed successfully."));
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.list(resolveTenantCode(), page, size, resolveCrmAccessScope()),
+            "CRM accounts listed successfully."
+        ));
     }
 
     @Operation(summary = "Update CRM account")
@@ -90,7 +96,10 @@ public class CrmAccountController {
         @PathVariable final String accountId,
         @Valid @RequestBody final CrmAccountUpdateRequest request
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(service.update(resolveTenantCode(), accountId, request), "CRM account updated successfully."));
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.update(resolveTenantCode(), accountId, request, resolveCrmAccessScope()),
+            "CRM account updated successfully."
+        ));
     }
 
     @Operation(summary = "Delete CRM account")
@@ -102,30 +111,16 @@ public class CrmAccountController {
     })
     @DeleteMapping("/{accountId}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable final String accountId) {
-        service.delete(resolveTenantCode(), accountId);
+        service.delete(resolveTenantCode(), accountId, resolveCrmAccessScope());
         return ResponseEntity.ok(ApiResponse.empty("CRM account deleted successfully."));
     }
 
     private String resolveTenantCode() {
-        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof JwtPrincipal principal) {
-            requireCrmProductScope(principal);
-            if (!StringUtils.hasText(principal.tenantCode())) {
-                throw new NexraUnauthorizedException("Authenticated CRM user is missing tenant context.");
-            }
-            return principal.tenantCode().trim();
-        }
-        if (!properties.isEnforceAuth()) {
-            return "DEV";
-        }
-        throw new NexraUnauthorizedException("Authentication is required.");
+        return requestContextResolver.resolveTenantCode(properties);
     }
 
-    private void requireCrmProductScope(final JwtPrincipal principal) {
-        if (principal.products().contains("CRM")) {
-            return;
-        }
-        throw new NexraForbiddenException("User does not have CRM product access.");
+    private CrmAccessScope resolveCrmAccessScope() {
+        return requestContextResolver.resolveCrmAccessScope(properties);
     }
 }
 

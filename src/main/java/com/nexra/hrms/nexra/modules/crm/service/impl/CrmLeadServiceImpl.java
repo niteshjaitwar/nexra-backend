@@ -3,6 +3,7 @@ package com.nexra.hrms.nexra.modules.crm.service.impl;
 import com.nexra.hrms.nexra.common.api.PageResponse;
 import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
 import com.nexra.hrms.nexra.common.audit.AuditEventService;
+import com.nexra.hrms.nexra.common.exception.NexraForbiddenException;
 import com.nexra.hrms.nexra.common.exception.NexraNotFoundException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
@@ -23,6 +24,7 @@ import com.nexra.hrms.nexra.modules.crm.repository.CrmContactRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmDealRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmLeadRepository;
 import com.nexra.hrms.nexra.modules.crm.service.CrmLeadService;
+import com.nexra.hrms.nexra.modules.crm.support.CrmAccessScope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -63,9 +65,10 @@ public class CrmLeadServiceImpl implements CrmLeadService {
      * @return created lead.
      */
     @Override
-    public CrmLead create(final String tenantCode, final CrmLeadCreateRequest request) {
+    public CrmLead create(final String tenantCode, final CrmLeadCreateRequest request, final CrmAccessScope accessScope) {
         final String normalizedTenantCode = normalizeTenantCode(tenantCode);
         final String normalizedEmail = normalize(request.email());
+        enforceOwnerAccess(accessScope, request.ownerUserId());
         ensureUniqueEmail(normalizedTenantCode, normalizedEmail, null);
         final Instant now = Instant.now();
         final CrmLeadEntity entity = new CrmLeadEntity();
@@ -97,12 +100,16 @@ public class CrmLeadServiceImpl implements CrmLeadService {
      * @return updated lead.
      */
     @Override
-    public CrmLead update(final String tenantCode, final String leadId, final CrmLeadUpdateRequest request) {
+    public CrmLead update(final String tenantCode, final String leadId, final CrmLeadUpdateRequest request, final CrmAccessScope accessScope) {
         final String normalizedTenantCode = normalizeTenantCode(tenantCode);
         final CrmLeadEntity entity = repository.findByIdAndTenantCodeIgnoreCase(leadId, normalizedTenantCode)
             .orElseThrow(() -> new NexraNotFoundException("CRM lead not found for id: " + leadId));
+        ensureVisibleForAccessScope(entity, accessScope, leadId);
         final String email = request.email() != null ? normalize(request.email()) : entity.getEmail();
         ensureUniqueEmail(normalizedTenantCode, email, leadId);
+        if (request.ownerUserId() != null) {
+            enforceOwnerAccess(accessScope, request.ownerUserId());
+        }
         entity.setFullName(valueOrDefault(request.fullName(), entity.getFullName()));
         entity.setEmail(email);
         entity.setPhone(valueOrDefaultNullable(request.phone(), entity.getPhone()));
@@ -128,10 +135,11 @@ public class CrmLeadServiceImpl implements CrmLeadService {
      * @return lead.
      */
     @Override
-    public CrmLead findById(final String tenantCode, final String leadId) {
+    public CrmLead findById(final String tenantCode, final String leadId, final CrmAccessScope accessScope) {
         final String normalizedTenantCode = normalizeTenantCode(tenantCode);
         final CrmLeadEntity entity = repository.findByIdAndTenantCodeIgnoreCase(leadId, normalizedTenantCode)
             .orElseThrow(() -> new NexraNotFoundException("CRM lead not found for id: " + leadId));
+        ensureVisibleForAccessScope(entity, accessScope, leadId);
         return toModel(entity);
     }
 
@@ -143,11 +151,16 @@ public class CrmLeadServiceImpl implements CrmLeadService {
      * @return paged lead response.
      */
     @Override
-    public PageResponse<CrmLead> list(final String tenantCode, final int page, final int size) {
+    public PageResponse<CrmLead> list(final String tenantCode, final int page, final int size, final CrmAccessScope accessScope) {
         final String normalizedTenantCode = normalizeTenantCode(tenantCode);
         validatePaging(page, size);
-        final Page<CrmLeadEntity> result = repository
-            .findAllByTenantCodeIgnoreCaseOrderByDomainUpdatedAtDescIdDesc(normalizedTenantCode, PageRequest.of(page, size));
+        final Page<CrmLeadEntity> result = accessScope.privileged()
+            ? repository.findAllByTenantCodeIgnoreCaseOrderByDomainUpdatedAtDescIdDesc(normalizedTenantCode, PageRequest.of(page, size))
+            : repository.findAllByTenantCodeIgnoreCaseAndOwnerUserIdOrderByDomainUpdatedAtDescIdDesc(
+                normalizedTenantCode,
+                requireActorUserId(accessScope),
+                PageRequest.of(page, size)
+            );
         final List<CrmLead> items = result.getContent().stream().map(this::toModel).toList();
         return new PageResponse<>(
             items,
@@ -166,13 +179,14 @@ public class CrmLeadServiceImpl implements CrmLeadService {
      * @param leadId lead id.
      */
     @Override
-    public void delete(final String tenantCode, final String leadId) {
+    public void delete(final String tenantCode, final String leadId, final CrmAccessScope accessScope) {
         final String normalizedTenantCode = normalizeTenantCode(tenantCode);
         if (activityRepository.existsByTenantCodeIgnoreCaseAndLeadIdAndActivityTypeIgnoreCase(normalizedTenantCode, leadId, "LEAD_CONVERTED")) {
             throw new NexraValidationException("Converted lead cannot be deleted directly. Use archival workflow.");
         }
         final CrmLeadEntity entity = repository.findByIdAndTenantCodeIgnoreCase(leadId, normalizedTenantCode)
             .orElseThrow(() -> new NexraNotFoundException("CRM lead not found for id: " + leadId));
+        ensureVisibleForAccessScope(entity, accessScope, leadId);
         repository.delete(entity);
         log.info("CrmLeadServiceImpl - delete() - leadId={}", leadId);
         auditEventService.record(AuditEventRecord.of(normalizedTenantCode, "CRM", "DELETE_LEAD", "SUCCESS")
@@ -280,10 +294,16 @@ public class CrmLeadServiceImpl implements CrmLeadService {
 
     @Override
     @Transactional
-    public CrmLeadConversionResult convertLead(final String tenantCode, final String leadId, final CrmLeadConvertRequest request) {
+    public CrmLeadConversionResult convertLead(
+        final String tenantCode,
+        final String leadId,
+        final CrmLeadConvertRequest request,
+        final CrmAccessScope accessScope
+    ) {
         final String normalizedTenantCode = normalizeTenantCode(tenantCode);
         final CrmLeadEntity lead = repository.findByIdAndTenantCodeIgnoreCase(leadId, normalizedTenantCode)
             .orElseThrow(() -> new NexraNotFoundException("CRM lead not found for id: " + leadId));
+        ensureVisibleForAccessScope(lead, accessScope, leadId);
         if (activityRepository.existsByTenantCodeIgnoreCaseAndLeadIdAndActivityTypeIgnoreCase(normalizedTenantCode, leadId, "LEAD_CONVERTED")) {
             throw new NexraValidationException("Lead is already converted.");
         }
@@ -359,5 +379,35 @@ public class CrmLeadServiceImpl implements CrmLeadService {
             throw new NexraValidationException("Tenant code must contain only letters, numbers, hyphen, or underscore.");
         }
         return normalized;
+    }
+
+    private void ensureVisibleForAccessScope(final CrmLeadEntity entity, final CrmAccessScope accessScope, final String leadId) {
+        if (accessScope.privileged()) {
+            return;
+        }
+        final String actorUserId = requireActorUserId(accessScope);
+        if (actorUserId.equals(entity.getOwnerUserId())) {
+            return;
+        }
+        throw new NexraNotFoundException("CRM lead not found for id: " + leadId);
+    }
+
+    private void enforceOwnerAccess(final CrmAccessScope accessScope, final String targetOwnerUserId) {
+        if (accessScope.privileged()) {
+            return;
+        }
+        final String actorUserId = requireActorUserId(accessScope);
+        final String targetOwner = normalize(targetOwnerUserId);
+        if (actorUserId.equals(targetOwner)) {
+            return;
+        }
+        throw new NexraForbiddenException("Non-admin CRM users can only operate on their own owned records.");
+    }
+
+    private String requireActorUserId(final CrmAccessScope accessScope) {
+        if (accessScope.actorUserId() == null || accessScope.actorUserId().isBlank()) {
+            throw new NexraForbiddenException("Authenticated CRM user is missing actor identity.");
+        }
+        return accessScope.actorUserId().trim();
     }
 }

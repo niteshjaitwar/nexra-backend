@@ -2,29 +2,33 @@ package com.nexra.hrms.nexra.modules.crm.controller;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.common.exception.NexraForbiddenException;
-import com.nexra.hrms.nexra.common.exception.NexraUnauthorizedException;
 import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmCustomFieldDefinitionRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmRecordSharingRuleRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmWorkflowRuleRequest;
+import com.nexra.hrms.nexra.modules.crm.dto.request.IntegrationWebhookSignatureVerificationRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.IntegrationWebhookSubscriptionRequest;
 import com.nexra.hrms.nexra.modules.crm.model.CrmCustomFieldDefinition;
 import com.nexra.hrms.nexra.modules.crm.model.CrmRecordSharingRule;
 import com.nexra.hrms.nexra.modules.crm.model.CrmWorkflowRule;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookDeliveryAlertStatus;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookDelivery;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookDeliveryMetrics;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookReplayAuditView;
+import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookSignatureVerification;
 import com.nexra.hrms.nexra.modules.crm.model.IntegrationWebhookSubscription;
 import com.nexra.hrms.nexra.modules.crm.service.CrmAdministrationService;
+import com.nexra.hrms.nexra.modules.crm.support.CrmRequestContextResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,6 +46,7 @@ public class CrmAdministrationController {
 
     private final CrmAdministrationService service;
     private final CrmProperties properties;
+    private final CrmRequestContextResolver requestContextResolver;
 
     @Operation(summary = "Create CRM custom field")
     @PostMapping("/custom-fields")
@@ -134,19 +139,76 @@ public class CrmAdministrationController {
         return ResponseEntity.ok(ApiResponse.ok(service.listWebhooks(principal.tenantCode()), "CRM webhook subscriptions listed successfully."));
     }
 
+    @Operation(summary = "List CRM webhook deliveries")
+    @GetMapping("/webhooks/deliveries")
+    public ResponseEntity<ApiResponse<List<IntegrationWebhookDelivery>>> listWebhookDeliveries() {
+        final JwtPrincipal principal = requirePrincipal();
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.listWebhookDeliveries(principal.tenantCode()),
+            "CRM webhook deliveries listed successfully."
+        ));
+    }
+
+    @Operation(summary = "Replay dead-letter CRM webhook delivery")
+    @PostMapping("/webhooks/deliveries/{deliveryId}/replay")
+    public ResponseEntity<ApiResponse<IntegrationWebhookDelivery>> replayWebhookDelivery(
+        @PathVariable final String deliveryId
+    ) {
+        final JwtPrincipal principal = requirePrincipal();
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.replayWebhookDelivery(principal.tenantCode(), principal.email(), principal.userId().toString(), deliveryId),
+            "CRM webhook delivery replay queued successfully."
+        ));
+    }
+
+    @Operation(summary = "Get CRM webhook delivery metrics")
+    @GetMapping("/webhooks/deliveries/metrics")
+    public ResponseEntity<ApiResponse<IntegrationWebhookDeliveryMetrics>> getWebhookDeliveryMetrics() {
+        final JwtPrincipal principal = requirePrincipal();
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.getWebhookDeliveryMetrics(principal.tenantCode()),
+            "CRM webhook delivery metrics fetched successfully."
+        ));
+    }
+
+    @Operation(summary = "Get CRM webhook delivery alert status")
+    @GetMapping("/webhooks/deliveries/alerts")
+    public ResponseEntity<ApiResponse<IntegrationWebhookDeliveryAlertStatus>> getWebhookDeliveryAlertStatus() {
+        final JwtPrincipal principal = requirePrincipal();
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.getWebhookDeliveryAlertStatus(principal.tenantCode()),
+            "CRM webhook delivery alert status fetched successfully."
+        ));
+    }
+
+    @Operation(summary = "List CRM webhook replay audits")
+    @GetMapping("/webhooks/replays")
+    public ResponseEntity<ApiResponse<List<IntegrationWebhookReplayAuditView>>> listWebhookReplayAudits(
+        @RequestParam(defaultValue = "50") final int limit
+    ) {
+        final JwtPrincipal principal = requirePrincipal();
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.listWebhookReplayAudits(principal.tenantCode(), limit),
+            "CRM webhook replay audits listed successfully."
+        ));
+    }
+
+    @Operation(summary = "Verify CRM webhook signature")
+    @PostMapping("/webhooks/signature/verify")
+    public ResponseEntity<ApiResponse<IntegrationWebhookSignatureVerification>> verifyWebhookSignature(
+        @Valid @RequestBody final IntegrationWebhookSignatureVerificationRequest request
+    ) {
+        final JwtPrincipal principal = requirePrincipal();
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.verifyWebhookSignature(principal.tenantCode(), request),
+            "CRM webhook signature verified successfully."
+        ));
+    }
+
     private JwtPrincipal requirePrincipal() {
-        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof JwtPrincipal principal) {
-            requireCrmAdmin(principal);
-            if (!StringUtils.hasText(principal.tenantCode())) {
-                throw new NexraUnauthorizedException("Authenticated CRM user is missing tenant context.");
-            }
-            return principal;
-        }
-        if (!properties.isEnforceAuth()) {
-            throw new NexraUnauthorizedException("CRM administration requires authentication.");
-        }
-        throw new NexraUnauthorizedException("Authentication is required.");
+        final JwtPrincipal principal = requestContextResolver.resolveAuthenticatedPrincipal(properties);
+        requireCrmAdmin(principal);
+        return principal;
     }
 
     private void requireCrmAdmin(final JwtPrincipal principal) {

@@ -1,13 +1,18 @@
 package com.nexra.hrms.nexra.modules.crm;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import com.nexra.hrms.nexra.modules.crm.repository.IntegrationWebhookDeliveryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,13 +26,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "nexra.crm.enforce-auth=true")
+@SpringBootTest(properties = {
+    "nexra.crm.enforce-auth=true",
+    "nexra.crm.webhooks.dispatch-fixed-delay-ms=600000"
+})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class CrmAdministrationIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private IntegrationWebhookDeliveryRepository webhookDeliveryRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     void crmAdminCanConfigureCustomizationAutomationSharingAndWebhooks() throws Exception {
@@ -126,10 +137,84 @@ class CrmAdministrationIntegrationTest {
             .andExpect(jsonPath("$.data.eventType").value("CRM_DEAL_WON"))
             .andExpect(jsonPath("$.data.targetUrl").value("https://integrations.acme.test/crm/deal-won"));
 
+        org.junit.jupiter.api.Assertions.assertTrue(
+            webhookDeliveryRepository.countByTenantCodeIgnoreCaseAndProductKeyIgnoreCase("ACME", "CRM") >= 1
+        );
+
         mockMvc.perform(get("/api/v1/crm/admin/webhooks")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data[0].productKey").value("CRM"));
+
+        mockMvc.perform(get("/api/v1/crm/admin/webhooks/deliveries")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].status").isNotEmpty());
+
+        final String deliveriesPayload = mockMvc.perform(get("/api/v1/crm/admin/webhooks/deliveries")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        final String deliveryId = objectMapper.readTree(deliveriesPayload).path("data").get(0).path("id").asText();
+
+        mockMvc.perform(post("/api/v1/crm/admin/webhooks/deliveries/{deliveryId}/replay", deliveryId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().is(422))
+            .andExpect(jsonPath("$.message").value("Only dead-letter webhook deliveries can be replayed."));
+
+        mockMvc.perform(get("/api/v1/crm/admin/webhooks/deliveries/metrics")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.totalCount").isNumber());
+
+        mockMvc.perform(get("/api/v1/crm/admin/webhooks/deliveries/alerts")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.deadLetterThreshold").isNumber())
+            .andExpect(jsonPath("$.data.retryingThreshold").isNumber());
+
+        mockMvc.perform(get("/api/v1/crm/admin/webhooks/replays")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isArray());
+
+        final String payload = "{\"type\":\"CRM_DEAL_WON\",\"dealId\":\"D-1001\"}";
+        final String idempotencyKey = "evt-01-abc";
+        final String timestamp = "1760000000";
+        final String secret = "super-secret-webhook-token";
+        final String signature = signature(secret, payload, idempotencyKey, timestamp);
+
+        mockMvc.perform(post("/api/v1/crm/admin/webhooks/signature/verify")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "payloadJson":"%s",
+                      "idempotencyKey":"%s",
+                      "timestamp":"%s",
+                      "secret":"%s",
+                      "signature":"%s"
+                    }
+                    """.formatted(escapeJson(payload), idempotencyKey, timestamp, secret, signature)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.valid").value(true));
+
+        mockMvc.perform(post("/api/v1/crm/admin/webhooks/signature/verify")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "payloadJson":"%s",
+                      "idempotencyKey":"%s",
+                      "timestamp":"%s",
+                      "secret":"%s",
+                      "signature":"%s"
+                    }
+                    """.formatted(escapeJson(payload), idempotencyKey, timestamp, secret, "invalid-signature")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.valid").value(false));
     }
 
     @Test
@@ -162,6 +247,39 @@ class CrmAdministrationIntegrationTest {
             .andExpect(jsonPath("$.message").value("Webhook targetUrl may only use port 80 or 443."));
     }
 
+    @Test
+    void rejectsLocalAndPrivateWebhookHosts() throws Exception {
+        final String token = bearerToken("ACME", List.of("ROLE_USER"), Set.of("CRM"), Map.of("CRM", "SALES_MANAGER"));
+
+        mockMvc.perform(post("/api/v1/crm/admin/webhooks")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "eventType":"CRM_DEAL_WON",
+                      "targetUrl":"http://localhost/crm/deal-won",
+                      "secret":"super-secret-webhook-token",
+                      "active":true
+                    }
+                    """))
+            .andExpect(status().is(422))
+            .andExpect(jsonPath("$.message").value("Webhook targetUrl host is not allowed."));
+
+        mockMvc.perform(post("/api/v1/crm/admin/webhooks")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "eventType":"CRM_DEAL_WON",
+                      "targetUrl":"http://10.0.0.10/crm/deal-won",
+                      "secret":"super-secret-webhook-token",
+                      "active":true
+                    }
+                    """))
+            .andExpect(status().is(422))
+            .andExpect(jsonPath("$.message").value("Webhook targetUrl host is not allowed."));
+    }
+
     private String bearerToken(
         final String tenantCode,
         final List<String> roles,
@@ -178,5 +296,28 @@ class CrmAdministrationIntegrationTest {
             .claim("product_roles", productRoles)
             .signWith(key)
             .compact();
+    }
+
+    private String signature(
+        final String secret,
+        final String payload,
+        final String idempotencyKey,
+        final String timestamp
+    ) {
+        final String secretHash = sha256Hex(secret);
+        return sha256Hex(secretHash + "." + payload + "." + idempotencyKey + "." + timestamp);
+    }
+
+    private String sha256Hex(final String value) {
+        try {
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 digest is unavailable.", ex);
+        }
+    }
+
+    private String escapeJson(final String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

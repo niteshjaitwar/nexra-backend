@@ -6,6 +6,7 @@ import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadCreateRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLead;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLeadConversionResult;
+import com.nexra.hrms.nexra.modules.crm.support.CrmAccessScope;
 
 /**
  * Business contract for managing CRM leads.
@@ -21,7 +22,7 @@ public interface CrmLeadService {
      * @param request lead creation payload.
      * @return created lead.
      */
-    CrmLead create(String tenantCode, CrmLeadCreateRequest request);
+    CrmLead create(String tenantCode, CrmLeadCreateRequest request, CrmAccessScope accessScope);
 
     /**
      * Updates an existing CRM lead.
@@ -30,7 +31,7 @@ public interface CrmLeadService {
      * @param request lead update payload.
      * @return updated lead.
      */
-    CrmLead update(String tenantCode, String leadId, CrmLeadUpdateRequest request);
+    CrmLead update(String tenantCode, String leadId, CrmLeadUpdateRequest request, CrmAccessScope accessScope);
 
     /**
      * Retrieves a CRM lead by id.
@@ -38,7 +39,7 @@ public interface CrmLeadService {
      * @param leadId lead id.
      * @return lead details.
      */
-    CrmLead findById(String tenantCode, String leadId);
+    CrmLead findById(String tenantCode, String leadId, CrmAccessScope accessScope);
 
     /**
      * Lists CRM leads with pagination.
@@ -47,7 +48,7 @@ public interface CrmLeadService {
      * @param size requested page size.
      * @return paged lead collection.
      */
-    PageResponse<CrmLead> list(String tenantCode, int page, int size);
+    PageResponse<CrmLead> list(String tenantCode, int page, int size, CrmAccessScope accessScope);
 
     /**
      * Converts a lead into account, contact, and deal records.
@@ -57,12 +58,12 @@ public interface CrmLeadService {
      * @param request conversion payload.
      * @return identifiers for converted CRM records.
      */
-    CrmLeadConversionResult convertLead(String tenantCode, String leadId, CrmLeadConvertRequest request);
+    CrmLeadConversionResult convertLead(String tenantCode, String leadId, CrmLeadConvertRequest request, CrmAccessScope accessScope);
 
     /**
      * Deletes a CRM lead by id.
      *
      * @param leadId lead id.
      */
-    void delete(String tenantCode, String leadId);
+    void delete(String tenantCode, String leadId, CrmAccessScope accessScope);
 }

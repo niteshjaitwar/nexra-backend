@@ -10,6 +10,11 @@ public interface CrmActivityRepository extends JpaRepository<CrmActivityEntity, 
     boolean existsByTenantCodeIgnoreCaseAndLeadIdAndActivityTypeIgnoreCase(String tenantCode, String leadId, String activityType);
 
     Page<CrmActivityEntity> findAllByTenantCodeIgnoreCaseOrderByOccurredAtDescIdDesc(String tenantCode, Pageable pageable);
+    Page<CrmActivityEntity> findAllByTenantCodeIgnoreCaseAndOwnerUserIdOrderByOccurredAtDescIdDesc(
+        String tenantCode,
+        String ownerUserId,
+        Pageable pageable
+    );
 
     Page<CrmActivityEntity> findAllByTenantCodeIgnoreCaseAndLeadIdOrderByOccurredAtDescIdDesc(
         String tenantCode,
@@ -25,6 +30,27 @@ public interface CrmActivityRepository extends JpaRepository<CrmActivityEntity, 
 
     Page<CrmActivityEntity> findAllByTenantCodeIgnoreCaseAndDealIdOrderByOccurredAtDescIdDesc(
         String tenantCode,
+        String dealId,
+        Pageable pageable
+    );
+
+    Page<CrmActivityEntity> findAllByTenantCodeIgnoreCaseAndOwnerUserIdAndLeadIdOrderByOccurredAtDescIdDesc(
+        String tenantCode,
+        String ownerUserId,
+        String leadId,
+        Pageable pageable
+    );
+
+    Page<CrmActivityEntity> findAllByTenantCodeIgnoreCaseAndOwnerUserIdAndContactIdOrderByOccurredAtDescIdDesc(
+        String tenantCode,
+        String ownerUserId,
+        String contactId,
+        Pageable pageable
+    );
+
+    Page<CrmActivityEntity> findAllByTenantCodeIgnoreCaseAndOwnerUserIdAndDealIdOrderByOccurredAtDescIdDesc(
+        String tenantCode,
+        String ownerUserId,
         String dealId,
         Pageable pageable
     );

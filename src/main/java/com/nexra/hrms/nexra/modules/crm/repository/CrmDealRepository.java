@@ -12,6 +12,7 @@ public interface CrmDealRepository extends JpaRepository<CrmDealEntity, String> 
     Optional<CrmDealEntity> findByIdAndTenantCodeIgnoreCase(String id, String tenantCode);
 
     Page<CrmDealEntity> findAllByTenantCodeIgnoreCaseOrderByUpdatedAtDescIdDesc(String tenantCode, Pageable pageable);
+    Page<CrmDealEntity> findAllByTenantCodeIgnoreCaseAndOwnerUserIdOrderByUpdatedAtDescIdDesc(String tenantCode, String ownerUserId, Pageable pageable);
 
     long countByTenantCodeIgnoreCase(String tenantCode);
 
