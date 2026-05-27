@@ -78,6 +78,9 @@ public class CrmProperties {
 
         private int deadLetterAlertThreshold = 10;
         private int retryingAlertThreshold = 50;
+        private long signatureTimestampSkewSeconds = 300;
+        private long replayCacheTtlSeconds = 900;
+        private long replayCacheMaxEntries = 100_000;
 
         public int getDeadLetterAlertThreshold() {
             return deadLetterAlertThreshold;
@@ -93,6 +96,30 @@ public class CrmProperties {
 
         public void setRetryingAlertThreshold(final int retryingAlertThreshold) {
             this.retryingAlertThreshold = retryingAlertThreshold;
+        }
+
+        public long getSignatureTimestampSkewSeconds() {
+            return signatureTimestampSkewSeconds;
+        }
+
+        public void setSignatureTimestampSkewSeconds(final long signatureTimestampSkewSeconds) {
+            this.signatureTimestampSkewSeconds = signatureTimestampSkewSeconds;
+        }
+
+        public long getReplayCacheTtlSeconds() {
+            return replayCacheTtlSeconds;
+        }
+
+        public void setReplayCacheTtlSeconds(final long replayCacheTtlSeconds) {
+            this.replayCacheTtlSeconds = replayCacheTtlSeconds;
+        }
+
+        public long getReplayCacheMaxEntries() {
+            return replayCacheMaxEntries;
+        }
+
+        public void setReplayCacheMaxEntries(final long replayCacheMaxEntries) {
+            this.replayCacheMaxEntries = replayCacheMaxEntries;
         }
     }
 }

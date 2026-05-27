@@ -7,6 +7,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +183,7 @@ class CrmAdministrationIntegrationTest {
 
         final String payload = "{\"type\":\"CRM_DEAL_WON\",\"dealId\":\"D-1001\"}";
         final String idempotencyKey = "evt-01-abc";
-        final String timestamp = "1760000000";
+        final String timestamp = String.valueOf(Instant.now().getEpochSecond());
         final String secret = "super-secret-webhook-token";
         final String signature = signature(secret, payload, idempotencyKey, timestamp);
 
@@ -199,7 +200,9 @@ class CrmAdministrationIntegrationTest {
                     }
                     """.formatted(escapeJson(payload), idempotencyKey, timestamp, secret, signature)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.valid").value(true));
+            .andExpect(jsonPath("$.data.valid").value(true))
+            .andExpect(jsonPath("$.data.timestampValid").value(true))
+            .andExpect(jsonPath("$.data.replayDetected").value(false));
 
         mockMvc.perform(post("/api/v1/crm/admin/webhooks/signature/verify")
                 .header("Authorization", "Bearer " + token)
@@ -212,9 +215,29 @@ class CrmAdministrationIntegrationTest {
                       "secret":"%s",
                       "signature":"%s"
                     }
-                    """.formatted(escapeJson(payload), idempotencyKey, timestamp, secret, "invalid-signature")))
+                    """.formatted(escapeJson(payload), idempotencyKey, timestamp, secret, signature)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.valid").value(false));
+            .andExpect(jsonPath("$.data.valid").value(false))
+            .andExpect(jsonPath("$.data.replayDetected").value(true));
+
+        final String staleTimestamp = String.valueOf(Instant.now().minusSeconds(1000).getEpochSecond());
+        final String staleSignature = signature(secret, payload, "evt-02-old", staleTimestamp);
+        mockMvc.perform(post("/api/v1/crm/admin/webhooks/signature/verify")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "payloadJson":"%s",
+                      "idempotencyKey":"%s",
+                      "timestamp":"%s",
+                      "secret":"%s",
+                      "signature":"%s"
+                    }
+                    """.formatted(escapeJson(payload), "evt-02-old", staleTimestamp, secret, staleSignature)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.valid").value(false))
+            .andExpect(jsonPath("$.data.timestampValid").value(false))
+            .andExpect(jsonPath("$.data.replayDetected").value(false));
     }
 
     @Test

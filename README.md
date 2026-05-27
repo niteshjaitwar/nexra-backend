@@ -1,16 +1,15 @@
 # Nexra Backend
 
-Production-grade modular monolith powering **Nexra HRMS + CRM**.
+Production-grade Spring Boot modular monolith powering **Nexra HRMS + CRM**.
 
 ## Overview
 
 Nexra Backend is a single Spring Boot runtime with strict internal module boundaries, shared cross-cutting standards, and CI-enforced quality gates.  
 It is designed for fast feature delivery without microservice complexity while preserving enterprise reliability.
 
-- **Live website**: [https://hrms.nexra.info](https://hrms.nexra.info)
 - **Architecture**: Modular monolith
 - **Primary domain**: HRMS + CRM
-- **Current status**: Production-ready backend baseline with verified module hardening
+- **Current status**: Production-ready service baseline with verified module hardening
 
 ## Implemented Modules
 
@@ -24,7 +23,7 @@ It is designed for fast feature delivery without microservice complexity while p
 - `hrms.recruitment`
 - `hrms.expense`
 - `payroll`
-- `crm` (tenant-isolated persistent lead baseline + domain schema for accounts/contacts/deals/activities/tasks)
+- `crm` (tenant-isolated leads, accounts, contacts, deals, activities, tasks, workflows, webhooks, and audit trails)
 
 ## Core Engineering Standards
 
@@ -34,6 +33,7 @@ It is designed for fast feature delivery without microservice complexity while p
 - Shared global rate limiting with bounded in-memory key strategy
 - Shared auditing and optimistic locking (`@Version`) via common persistence base
 - Flyway-first schema evolution
+- CRM webhook HMAC verification with timestamp skew checks and replay protection
 - OpenAPI + actuator + Prometheus-ready metrics
 - CI gates: Maven enforcer + JaCoCo coverage check
 
@@ -46,6 +46,7 @@ It is designed for fast feature delivery without microservice complexity while p
 - MySQL (runtime), H2 (tests)
 - Redis (auth hardening flows)
 - Micrometer + Prometheus registry
+- OpenTelemetry tracing
 - Thymeleaf + OpenHTMLToPDF + PDFBox (payslips)
 
 ## Project Structure
@@ -93,6 +94,10 @@ src/main/java/com/nexra/hrms/nexra/
 Override them with `AUTH_DB_*`, `AUTH_JWT_SECRET`, and
 `AUTH_OAUTH2_DEFAULT_CLIENT_SECRET` when your local MySQL credentials differ.
 
+## Runtime Profiles
+
+The application includes environment-specific property sets for `dev`, `test`, `e2e`, `stage`, and `prod`, plus module-specific overlays for auth, CRM, HRMS, payroll, and expense domains.
+
 ## Verify Quality Gates
 
 ```bash
@@ -105,18 +110,15 @@ This executes:
 - JaCoCo coverage check
 - enforcer baseline rules
 
-## Frontend Integration Notes
+## API Surface
 
-- Frontend workspace (`../nexrahrms`) targets this monolith backend.
-- Local frontend expects backend on `http://localhost:8081`.
-- API base paths:
-  - `/api/v1/auth/*`
-  - `/api/v1/employee-core/*`
-  - `/api/v1/attendance/*`
-  - `/api/v1/leave/*`
-  - `/api/v1/timesheet/*`
-  - `/api/v1/payroll/*`
-  - `/api/v1/crm/*`
+- `/api/v1/auth/*`
+- `/api/v1/employee-core/*`
+- `/api/v1/attendance/*`
+- `/api/v1/leave/*`
+- `/api/v1/timesheet/*`
+- `/api/v1/payroll/*`
+- `/api/v1/crm/*`
 
 ## Documentation
 

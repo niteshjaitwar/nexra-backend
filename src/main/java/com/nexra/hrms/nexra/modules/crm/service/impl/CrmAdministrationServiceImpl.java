@@ -31,6 +31,7 @@ import com.nexra.hrms.nexra.modules.crm.repository.CrmWorkflowRuleRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.IntegrationWebhookDeliveryRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.IntegrationWebhookSubscriptionRepository;
 import com.nexra.hrms.nexra.modules.crm.service.CrmAdministrationService;
+import com.nexra.hrms.nexra.modules.crm.support.CrmWebhookReplayGuard;
 import com.nexra.hrms.nexra.modules.crm.support.CrmWebhookSignatureCodec;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -88,6 +89,7 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
     private final IntegrationWebhookSubscriptionRepository webhookRepository;
     private final IntegrationWebhookDeliveryRepository webhookDeliveryRepository;
     private final CrmWebhookDeliveryService webhookDeliveryService;
+    private final CrmWebhookReplayGuard webhookReplayGuard;
     private final AuditEventRepository auditEventRepository;
     private final AuditEventService auditEventService;
 
@@ -353,15 +355,34 @@ public class CrmAdministrationServiceImpl implements CrmAdministrationService {
         final String tenantCode,
         final IntegrationWebhookSignatureVerificationRequest request
     ) {
-        normalizeTenant(tenantCode);
+        final String tenant = normalizeTenant(tenantCode);
+        final String payloadJson = normalize(request.payloadJson());
+        final String idempotencyKey = normalize(request.idempotencyKey());
+        final String timestamp = normalize(request.timestamp());
+        final long nowEpochSeconds = Instant.now().getEpochSecond();
+        final long requestEpochSeconds = parseEpochSeconds(timestamp);
+        final long skewSeconds = Math.max(30, crmProperties.getWebhook().getSignatureTimestampSkewSeconds());
+        final boolean timestampValid = Math.abs(nowEpochSeconds - requestEpochSeconds) <= skewSeconds;
         final String expected = CrmWebhookSignatureCodec.buildSignature(
             CrmWebhookSignatureCodec.secretHash(request.secret()),
-            normalize(request.payloadJson()),
-            normalize(request.idempotencyKey()),
-            normalize(request.timestamp())
+            payloadJson,
+            idempotencyKey,
+            timestamp
         );
-        final boolean valid = CrmWebhookSignatureCodec.matches(expected, normalize(request.signature()));
-        return new IntegrationWebhookSignatureVerification(valid, CrmWebhookSignatureCodec.SIGNATURE_ALGORITHM);
+        final boolean signatureValid = CrmWebhookSignatureCodec.matches(expected, normalize(request.signature()));
+        final boolean replayDetected = timestampValid
+            && signatureValid
+            && !webhookReplayGuard.markIfFirstSeen(tenant, idempotencyKey, timestamp, normalize(request.signature()));
+        final boolean valid = timestampValid && signatureValid && !replayDetected;
+        return new IntegrationWebhookSignatureVerification(valid, CrmWebhookSignatureCodec.SIGNATURE_ALGORITHM, timestampValid, replayDetected);
+    }
+
+    private long parseEpochSeconds(final String timestamp) {
+        try {
+            return Long.parseLong(timestamp);
+        } catch (NumberFormatException ex) {
+            throw new NexraValidationException("Webhook timestamp must be epoch-seconds.");
+        }
     }
 
     private URI validateWebhookUrl(final String targetUrl) {
