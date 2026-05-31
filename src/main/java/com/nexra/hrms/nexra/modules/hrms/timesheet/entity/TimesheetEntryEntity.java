@@ -24,6 +24,7 @@ public class TimesheetEntryEntity extends AbstractAuditableEntity {
     @Column(name = "approver_email", length = 160) private String approverEmail;
     @Column(name = "approval_comment", length = 500) private String approvalComment;
     @Column(name = "notes", length = 500) private String notes;
+    @Column(name = "workflow_instance_id", length = 36) private String workflowInstanceId;
     public String getId() { return id; } public void setId(final String id) { this.id = id; }
     public String getTenantCode() { return tenantCode; } public void setTenantCode(final String tenantCode) { this.tenantCode = tenantCode; }
     public String getEmployeeId() { return employeeId; } public void setEmployeeId(final String employeeId) { this.employeeId = employeeId; }
@@ -37,5 +38,7 @@ public class TimesheetEntryEntity extends AbstractAuditableEntity {
     public String getApproverEmail() { return approverEmail; } public void setApproverEmail(final String approverEmail) { this.approverEmail = approverEmail; }
     public String getApprovalComment() { return approvalComment; } public void setApprovalComment(final String approvalComment) { this.approvalComment = approvalComment; }
     public String getNotes() { return notes; } public void setNotes(final String notes) { this.notes = notes; }
+    public String getWorkflowInstanceId() { return workflowInstanceId; }
+    public void setWorkflowInstanceId(final String workflowInstanceId) { this.workflowInstanceId = workflowInstanceId; }
 }
 

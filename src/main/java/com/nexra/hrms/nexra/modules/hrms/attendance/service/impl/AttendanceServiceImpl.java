@@ -2,16 +2,22 @@ package com.nexra.hrms.nexra.modules.hrms.attendance.service.impl;
 
 import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
 import com.nexra.hrms.nexra.common.audit.AuditEventService;
+import com.nexra.hrms.nexra.common.workflow.WorkflowRuntime;
+import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.AttendanceRegularizationDecisionRequest;
+import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.AttendanceRegularizationSubmitRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.CheckInRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.CheckOutRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.ShiftUpsertRequest;
+import com.nexra.hrms.nexra.modules.hrms.attendance.entity.AttendanceRegularizationEntity;
 import com.nexra.hrms.nexra.modules.hrms.attendance.entity.AttendanceRecordEntity;
 import com.nexra.hrms.nexra.modules.hrms.attendance.entity.ShiftEntity;
 import com.nexra.hrms.nexra.modules.hrms.attendance.exception.AttendanceBusinessException;
 import com.nexra.hrms.nexra.modules.hrms.attendance.exception.AttendanceForbiddenException;
 import com.nexra.hrms.nexra.modules.hrms.attendance.exception.AttendanceResourceNotFoundException;
+import com.nexra.hrms.nexra.modules.hrms.attendance.model.AttendanceRegularizationView;
 import com.nexra.hrms.nexra.modules.hrms.attendance.model.AttendanceRecordView;
 import com.nexra.hrms.nexra.modules.hrms.attendance.model.ShiftView;
+import com.nexra.hrms.nexra.modules.hrms.attendance.repository.AttendanceRegularizationRepository;
 import com.nexra.hrms.nexra.modules.hrms.attendance.repository.AttendanceRecordRepository;
 import com.nexra.hrms.nexra.modules.hrms.attendance.repository.ShiftRepository;
 import com.nexra.hrms.nexra.modules.hrms.attendance.security.AuthenticatedAttendanceUser;
@@ -41,10 +47,17 @@ public class AttendanceServiceImpl implements AttendanceService {
     private static final String STATUS_CHECKED_IN = "CHECKED_IN";
     private static final String STATUS_PRESENT = "PRESENT";
     private static final String STATUS_PARTIAL = "PARTIAL";
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_APPROVED = "APPROVED";
+    private static final String STATUS_REJECTED = "REJECTED";
+    private static final String WORKFLOW_PRODUCT_CODE = "HRMS";
+    private static final String WORKFLOW_MODULE_KEY = "attendance-regularizations";
 
     private final ShiftRepository shiftRepository;
     private final AttendanceRecordRepository attendanceRecordRepository;
+    private final AttendanceRegularizationRepository regularizationRepository;
     private final AuditEventService auditEventService;
+    private final WorkflowRuntime workflowRuntime;
 
     /**
      * Creates or updates a shift definition.
@@ -296,6 +309,142 @@ public class AttendanceServiceImpl implements AttendanceService {
         return summary;
     }
 
+    @Override
+    @Transactional
+    public AttendanceRegularizationView submitRegularization(
+        final AttendanceRegularizationSubmitRequest request,
+        final AuthenticatedAttendanceUser actor
+    ) {
+        verifyTenant(actor, request.tenantCode());
+        ensureSelfOrAdmin(actor, request.employeeId());
+        final String tenant = normTenant(request.tenantCode());
+        if (regularizationRepository.existsByTenantCodeIgnoreCaseAndEmployeeIdAndWorkDateAndStatusIgnoreCase(
+            tenant, trim(request.employeeId()), request.workDate(), STATUS_PENDING)) {
+            throw new AttendanceBusinessException("A pending regularization already exists for this date.");
+        }
+        final AttendanceRegularizationEntity entity = new AttendanceRegularizationEntity();
+        entity.setId(UUID.randomUUID().toString());
+        entity.setTenantCode(tenant);
+        entity.setEmployeeId(trim(request.employeeId()));
+        entity.setWorkDate(request.workDate());
+        entity.setReason(blankToNull(request.reason()));
+        entity.setRequestedCheckInAt(request.requestedCheckInAt());
+        entity.setRequestedCheckOutAt(request.requestedCheckOutAt());
+        entity.setStatus(STATUS_PENDING);
+        entity.setCreatedBy(actor.email());
+        entity.setUpdatedBy(actor.email());
+        AttendanceRegularizationEntity saved = regularizationRepository.save(entity);
+        final WorkflowRuntime.WorkflowSubmissionResult workflow = workflowRuntime.submit(
+            saved.getTenantCode(),
+            WORKFLOW_PRODUCT_CODE,
+            WORKFLOW_MODULE_KEY,
+            "ATTENDANCE_REGULARIZATION_SUBMITTED",
+            actor.email(),
+            Map.of("regularizationId", saved.getId(), "employeeId", saved.getEmployeeId())
+        );
+        saved.setWorkflowInstanceId(workflow.workflowRef());
+        saved = regularizationRepository.save(saved);
+        recordAudit(saved.getTenantCode(), "SUBMIT_ATTENDANCE_REGULARIZATION", actor, "ATTENDANCE_REGULARIZATION", saved.getId());
+        return toRegularization(saved);
+    }
+
+    @Override
+    @Transactional
+    public AttendanceRegularizationView approveRegularization(
+        final String requestId,
+        final AttendanceRegularizationDecisionRequest request,
+        final AuthenticatedAttendanceUser actor
+    ) {
+        return decideRegularization(requestId, request, actor, true);
+    }
+
+    @Override
+    @Transactional
+    public AttendanceRegularizationView rejectRegularization(
+        final String requestId,
+        final AttendanceRegularizationDecisionRequest request,
+        final AuthenticatedAttendanceUser actor
+    ) {
+        return decideRegularization(requestId, request, actor, false);
+    }
+
+    private AttendanceRegularizationView decideRegularization(
+        final String requestId,
+        final AttendanceRegularizationDecisionRequest request,
+        final AuthenticatedAttendanceUser actor,
+        final boolean approve
+    ) {
+        verifyTenant(actor, request.tenantCode());
+        requireAdmin(actor);
+        final String tenant = normTenant(request.tenantCode());
+        AttendanceRegularizationEntity entity = regularizationRepository.findByIdAndTenantCodeIgnoreCase(requestId, tenant)
+            .orElseThrow(() -> new AttendanceResourceNotFoundException("Regularization request not found: " + requestId));
+        if (!STATUS_PENDING.equalsIgnoreCase(entity.getStatus())) {
+            throw new AttendanceBusinessException("Regularization request already decided: " + entity.getStatus());
+        }
+        entity.setStatus(approve ? STATUS_APPROVED : STATUS_REJECTED);
+        entity.setApproverEmail(actor.email());
+        entity.setDecisionComment(blankToNull(request.decisionComment()));
+        entity.setUpdatedBy(actor.email());
+        if (approve) {
+            applyRegularizationToRecord(entity, actor.email());
+        }
+        AttendanceRegularizationEntity saved = regularizationRepository.save(entity);
+        recordAudit(saved.getTenantCode(), approve ? "APPROVE_ATTENDANCE_REGULARIZATION" : "REJECT_ATTENDANCE_REGULARIZATION",
+            actor, "ATTENDANCE_REGULARIZATION", saved.getId());
+        if (saved.getWorkflowInstanceId() != null) {
+            workflowRuntime.advance(saved.getTenantCode(), saved.getWorkflowInstanceId(), approve, actor.email(),
+                blankToNull(request.decisionComment()));
+        }
+        return toRegularization(saved);
+    }
+
+    private void applyRegularizationToRecord(final AttendanceRegularizationEntity regularization, final String actorEmail) {
+        AttendanceRecordEntity record = attendanceRecordRepository
+            .findByTenantCodeIgnoreCaseAndEmployeeIdAndWorkDate(
+                regularization.getTenantCode(), regularization.getEmployeeId(), regularization.getWorkDate())
+            .orElseGet(AttendanceRecordEntity::new);
+        if (record.getId() == null) {
+            record.setId(UUID.randomUUID().toString());
+            record.setTenantCode(regularization.getTenantCode());
+            record.setEmployeeId(regularization.getEmployeeId());
+            record.setWorkDate(regularization.getWorkDate());
+            record.setCreatedBy(actorEmail);
+        }
+        if (regularization.getRequestedCheckInAt() != null) {
+            record.setCheckInAt(regularization.getRequestedCheckInAt());
+        }
+        if (regularization.getRequestedCheckOutAt() != null) {
+            record.setCheckOutAt(regularization.getRequestedCheckOutAt());
+        }
+        if (record.getCheckInAt() != null && record.getCheckOutAt() != null) {
+            BigDecimal hours = BigDecimal.valueOf(Duration.between(record.getCheckInAt(), record.getCheckOutAt()).toMinutes())
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+            record.setTotalHours(hours);
+            record.setStatus(hours.compareTo(BigDecimal.ZERO) > 0 ? STATUS_PRESENT : STATUS_PARTIAL);
+        } else if (record.getCheckInAt() != null) {
+            record.setStatus(STATUS_CHECKED_IN);
+            record.setTotalHours(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+        }
+        record.setUpdatedBy(actorEmail);
+        attendanceRecordRepository.save(record);
+    }
+
+    private AttendanceRegularizationView toRegularization(final AttendanceRegularizationEntity entity) {
+        return new AttendanceRegularizationView(
+            entity.getId(),
+            entity.getTenantCode(),
+            entity.getEmployeeId(),
+            entity.getWorkDate(),
+            entity.getReason(),
+            entity.getRequestedCheckInAt(),
+            entity.getRequestedCheckOutAt(),
+            entity.getStatus(),
+            entity.getApproverEmail(),
+            entity.getDecisionComment()
+        );
+    }
+
     private ShiftView toModel(final ShiftEntity entity) {
         return new ShiftView(
             entity.getId(),
@@ -333,6 +482,13 @@ public class AttendanceServiceImpl implements AttendanceService {
             return;
         }
         throw new AttendanceForbiddenException("User cannot access attendance for another employee");
+    }
+
+    private void requireAdmin(final AuthenticatedAttendanceUser actor) {
+        if (isAdmin(actor)) {
+            return;
+        }
+        throw new AttendanceForbiddenException("User does not have attendance administration permission");
     }
 
     private boolean isAdmin(final AuthenticatedAttendanceUser actor) {

@@ -3,10 +3,16 @@ package com.nexra.hrms.nexra.modules.auth.service.impl;
 import com.nexra.hrms.nexra.modules.auth.config.AuthProperties;
 import com.nexra.hrms.nexra.modules.auth.dto.request.LinkVerificationRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.LoginRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.request.MfaVerifySetupRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.OtpVerificationRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.request.PasswordResetConfirmRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.RefreshTokenRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.RegisterRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.VerificationRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.response.AuthMeResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.AuthSessionResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.MfaEnableResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.MfaSetupResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.TokenPairResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.UserProfileResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.VerificationDispatchResponse;
@@ -14,6 +20,7 @@ import com.nexra.hrms.nexra.modules.auth.dto.response.VerificationResultResponse
 import com.nexra.hrms.nexra.modules.auth.entity.RefreshToken;
 import com.nexra.hrms.nexra.modules.auth.entity.Tenant;
 import com.nexra.hrms.nexra.modules.auth.entity.UserAccount;
+import com.nexra.hrms.nexra.modules.auth.entity.UserMfaRecoveryCodeEntity;
 import com.nexra.hrms.nexra.modules.auth.entity.VerificationToken;
 import com.nexra.hrms.nexra.modules.auth.enums.UserRole;
 import com.nexra.hrms.nexra.modules.auth.enums.UserStatus;
@@ -21,9 +28,12 @@ import com.nexra.hrms.nexra.modules.auth.enums.VerificationPurpose;
 import com.nexra.hrms.nexra.modules.auth.enums.VerificationType;
 import com.nexra.hrms.nexra.modules.auth.exception.BusinessException;
 import com.nexra.hrms.nexra.modules.auth.exception.UnauthorizedException;
+import com.nexra.hrms.nexra.modules.auth.exception.ResourceNotFoundException;
 import com.nexra.hrms.nexra.modules.auth.repository.RefreshTokenRepository;
 import com.nexra.hrms.nexra.modules.auth.repository.TenantRepository;
 import com.nexra.hrms.nexra.modules.auth.repository.UserAccountRepository;
+import com.nexra.hrms.nexra.modules.auth.repository.UserMfaRecoveryCodeRepository;
+import com.nexra.hrms.nexra.modules.auth.repository.UserProductAccessRepository;
 import com.nexra.hrms.nexra.modules.auth.repository.VerificationTokenRepository;
 import com.nexra.hrms.nexra.modules.auth.security.JwtService;
 import com.nexra.hrms.nexra.modules.auth.service.AuthService;
@@ -31,16 +41,21 @@ import com.nexra.hrms.nexra.modules.auth.service.TenantService;
 import com.nexra.hrms.nexra.modules.auth.service.notification.NotificationService;
 import com.nexra.hrms.nexra.modules.auth.service.security.LoginProtectionService;
 import com.nexra.hrms.nexra.modules.auth.service.security.SecurityAuditService;
+import com.nexra.hrms.nexra.modules.auth.service.security.TotpService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -65,6 +80,8 @@ public class AuthServiceImpl implements AuthService {
     private final TenantService tenantService;
     private final TenantRepository tenantRepository;
     private final UserAccountRepository userAccountRepository;
+    private final UserProductAccessRepository userProductAccessRepository;
+    private final UserMfaRecoveryCodeRepository userMfaRecoveryCodeRepository;
     private final VerificationTokenRepository verificationTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -73,6 +90,7 @@ public class AuthServiceImpl implements AuthService {
     private final NotificationService notificationService;
     private final LoginProtectionService loginProtectionService;
     private final SecurityAuditService securityAuditService;
+    private final TotpService totpService;
     private final ModelMapper modelMapper;
 
     /**
@@ -132,6 +150,25 @@ public class AuthServiceImpl implements AuthService {
         if (user.getStatus() != UserStatus.ACTIVE || !user.isEmailVerified()) {
             securityAuditService.record("LOGIN", normalizedTenantCode, normalizedEmail, "FAILURE", "Account not active or email not verified.");
             throw new UnauthorizedException("Account is not verified or inactive.");
+        }
+        if (user.isMfaEnabled()) {
+            final boolean recoveryProvided = request.recoveryCode() != null && !request.recoveryCode().isBlank();
+            final boolean totpProvided = request.mfaCode() != null && !request.mfaCode().isBlank();
+            if (!recoveryProvided && !totpProvided) {
+                securityAuditService.record("LOGIN", normalizedTenantCode, normalizedEmail, "FAILURE", "MFA code missing.");
+                throw new UnauthorizedException("MFA code is required.");
+            }
+            if (recoveryProvided) {
+                if (!consumeRecoveryCode(user, request.recoveryCode().trim())) {
+                    loginProtectionService.recordLoginFailure(loginKey);
+                    securityAuditService.record("LOGIN", normalizedTenantCode, normalizedEmail, "FAILURE", "Invalid MFA recovery code.");
+                    throw new UnauthorizedException(GENERIC_LOGIN_FAILURE_MESSAGE);
+                }
+            } else if (!totpService.verify(request.mfaCode(), user.getMfaSecret())) {
+                loginProtectionService.recordLoginFailure(loginKey);
+                securityAuditService.record("LOGIN", normalizedTenantCode, normalizedEmail, "FAILURE", "Invalid MFA code.");
+                throw new UnauthorizedException(GENERIC_LOGIN_FAILURE_MESSAGE);
+            }
         }
         loginProtectionService.clearLoginFailures(loginKey);
         securityAuditService.record("LOGIN", normalizedTenantCode, normalizedEmail, "SUCCESS", "Interactive login completed.");
@@ -197,6 +234,178 @@ public class AuthServiceImpl implements AuthService {
             "IGNORED", "Logout requested for an already revoked refresh token.");
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public AuthMeResponse getCurrentUser(final UUID userId) {
+        final UserAccount user = userAccountRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        final Set<String> roleNames = user.getRoles().stream()
+            .map(UserRole::name)
+            .collect(Collectors.toSet());
+        final Set<String> products = userProductAccessRepository.findByUser(user).stream()
+            .map((access) -> access.getProduct().name())
+            .collect(Collectors.toSet());
+        return new AuthMeResponse(
+            user.getId(),
+            user.getTenant().getCode(),
+            user.getEmail(),
+            user.getFirstName(),
+            user.getLastName(),
+            user.isEmailVerified(),
+            user.isMfaEnabled(),
+            roleNames,
+            products
+        );
+    }
+
+    @Override
+    @Transactional
+    public void confirmPasswordReset(final PasswordResetConfirmRequest request) {
+        final UserAccount user = resolveUser(request.tenantCode(), request.email());
+        consumeVerificationTokenWithProtection(user, VerificationPurpose.PASSWORD_RESET, VerificationType.OTP, request.otp());
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userAccountRepository.save(user);
+        refreshTokenRepository.revokeAllActiveByUser(user, Instant.now());
+        securityAuditService.record("PASSWORD_RESET", user.getTenant().getCode(), user.getEmail(), "SUCCESS",
+            "Password reset completed and active sessions revoked.");
+    }
+
+    @Override
+    @Transactional
+    public MfaSetupResponse setupMfa(final UUID userId) {
+        final UserAccount user = userAccountRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        if (user.isMfaEnabled()) {
+            throw new BusinessException("MFA is already enabled for this account.");
+        }
+        final String secret = totpService.generateSecret();
+        user.setMfaSecret(secret);
+        userAccountRepository.save(user);
+        final String issuer = user.getTenant().getCode();
+        return new MfaSetupResponse(secret, totpService.buildOtpAuthUri(issuer, user.getEmail(), secret));
+    }
+
+    @Override
+    @Transactional
+    public MfaEnableResponse verifyMfaSetup(final UUID userId, final MfaVerifySetupRequest request) {
+        final UserAccount user = userAccountRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        if (user.getMfaSecret() == null || user.getMfaSecret().isBlank()) {
+            throw new BusinessException("MFA setup has not been initiated.");
+        }
+        if (!totpService.verify(request.code(), user.getMfaSecret())) {
+            throw new UnauthorizedException("Invalid MFA verification code.");
+        }
+        user.setMfaEnabled(true);
+        userAccountRepository.save(user);
+        userMfaRecoveryCodeRepository.deleteAllByUserId(user.getId());
+        final List<String> recoveryCodes = generateRecoveryCodes(user);
+        securityAuditService.record("MFA_ENABLE", user.getTenant().getCode(), user.getEmail(), "SUCCESS", "TOTP MFA enabled.");
+        return new MfaEnableResponse(recoveryCodes);
+    }
+
+    @Override
+    @Transactional
+    public void disableMfa(final UUID userId, final MfaVerifySetupRequest request) {
+        final UserAccount user = userAccountRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        if (!user.isMfaEnabled()) {
+            throw new BusinessException("MFA is not enabled for this account.");
+        }
+        if (!totpService.verify(request.code(), user.getMfaSecret())) {
+            throw new UnauthorizedException("Invalid MFA verification code.");
+        }
+        user.setMfaEnabled(false);
+        user.setMfaSecret(null);
+        userAccountRepository.save(user);
+        userMfaRecoveryCodeRepository.deleteAllByUserId(user.getId());
+        securityAuditService.record("MFA_DISABLE", user.getTenant().getCode(), user.getEmail(), "SUCCESS", "TOTP MFA disabled.");
+    }
+
+    private List<String> generateRecoveryCodes(final UserAccount user) {
+        final List<String> plainCodes = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            final String code = randomRecoveryCode();
+            plainCodes.add(code);
+            final UserMfaRecoveryCodeEntity entity = new UserMfaRecoveryCodeEntity();
+            entity.setUserId(user.getId());
+            entity.setCodeHash(hash(normalizeRecoveryCode(code)));
+            userMfaRecoveryCodeRepository.save(entity);
+        }
+        return plainCodes;
+    }
+
+    private boolean consumeRecoveryCode(final UserAccount user, final String rawCode) {
+        return userMfaRecoveryCodeRepository
+            .findByUserIdAndCodeHashAndUsedAtIsNull(user.getId(), hash(normalizeRecoveryCode(rawCode)))
+            .map((entity) -> {
+                entity.setUsedAt(Instant.now());
+                userMfaRecoveryCodeRepository.save(entity);
+                securityAuditService.record("MFA_RECOVERY_USED", user.getTenant().getCode(), user.getEmail(), "SUCCESS",
+                    "MFA recovery code consumed.");
+                return true;
+            })
+            .orElse(false);
+    }
+
+    private String randomRecoveryCode() {
+        final String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        final StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < 8; i++) {
+            if (i == 4) {
+                builder.append('-');
+            }
+            builder.append(alphabet.charAt(SECURE_RANDOM.nextInt(alphabet.length())));
+        }
+        return builder.toString();
+    }
+
+    private String normalizeRecoveryCode(final String code) {
+        return code.trim().toUpperCase(Locale.ROOT).replace("-", "");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AuthSessionResponse> listSessions(final UUID userId, final String currentRefreshToken) {
+        final UserAccount user = userAccountRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        final String currentHash = currentRefreshToken == null || currentRefreshToken.isBlank()
+            ? null
+            : hash(currentRefreshToken.trim());
+        return refreshTokenRepository.findByUserAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(user, Instant.now())
+            .stream()
+            .map((session) -> new AuthSessionResponse(
+                session.getId(),
+                session.getCreatedAt(),
+                session.getExpiresAt(),
+                currentHash != null && currentHash.equals(session.getTokenHash())
+            ))
+            .toList();
+    }
+
+    @Override
+    @Transactional
+    public void revokeAllSessions(final UUID userId, final RefreshTokenRequest keepCurrent) {
+        final UserAccount user = userAccountRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        if (keepCurrent == null || keepCurrent.refreshToken() == null || keepCurrent.refreshToken().isBlank()) {
+            refreshTokenRepository.revokeAllActiveByUser(user, Instant.now());
+            securityAuditService.record("SESSION_REVOKE_ALL", user.getTenant().getCode(), user.getEmail(), "SUCCESS",
+                "All active sessions revoked.");
+            return;
+        }
+        final String keepHash = hash(keepCurrent.refreshToken());
+        refreshTokenRepository.findByUserAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(user, Instant.now())
+            .stream()
+            .filter((session) -> !keepHash.equals(session.getTokenHash()))
+            .forEach((session) -> {
+                session.setRevokedAt(Instant.now());
+                refreshTokenRepository.save(session);
+            });
+        securityAuditService.record("SESSION_REVOKE_ALL", user.getTenant().getCode(), user.getEmail(), "SUCCESS",
+            "All sessions revoked except current.");
+    }
+
     /**
      * Creates and dispatches OTP token for account verification or passwordless login.
      *
@@ -222,8 +431,7 @@ public class AuthServiceImpl implements AuthService {
         securityAuditService.record("OTP_REQUEST", user.getTenant().getCode(), user.getEmail(), "SUCCESS", "OTP dispatched.");
 
         String destination = maskEmail(user.getEmail());
-        String devValue = authProperties.isExposeVerificationTokenInResponse() ? otp : null;
-        return new VerificationDispatchResponse("OTP", destination, "OTP sent successfully.", devValue);
+        return new VerificationDispatchResponse("OTP", destination, "OTP sent successfully.");
     }
 
     /**
@@ -237,6 +445,9 @@ public class AuthServiceImpl implements AuthService {
     public VerificationResultResponse verifyOtp(final OtpVerificationRequest request) {
         log.info("AuthServiceImpl() - verifyOtp() - Validating OTP, tenantCode={}, email={}, purpose={}",
             request.tenantCode(), maskEmail(request.email()), request.purpose());
+        if (request.purpose() == VerificationPurpose.PASSWORD_RESET) {
+            throw new BusinessException("Use POST /api/v1/auth/password/reset/confirm to complete password reset.");
+        }
         UserAccount user = resolveUser(request.tenantCode(), request.email());
         consumeVerificationTokenWithProtection(user, request.purpose(), VerificationType.OTP, request.otp());
         securityAuditService.record("OTP_VERIFY", user.getTenant().getCode(), user.getEmail(), "SUCCESS", "OTP verified.");
@@ -268,8 +479,7 @@ public class AuthServiceImpl implements AuthService {
         securityAuditService.record("LINK_REQUEST", user.getTenant().getCode(), user.getEmail(), "SUCCESS", "Verification link dispatched.");
 
         String destination = maskEmail(user.getEmail());
-        String devValue = authProperties.isExposeVerificationTokenInResponse() ? linkToken : null;
-        return new VerificationDispatchResponse("EMAIL_LINK", destination, "Verification link sent successfully.", devValue);
+        return new VerificationDispatchResponse("EMAIL_LINK", destination, "Verification link sent successfully.");
     }
 
     /**
@@ -510,7 +720,7 @@ public class AuthServiceImpl implements AuthService {
      * @return first six characters or fewer
      */
     private VerificationDispatchResponse genericVerificationDispatch(final String channel, final String destination) {
-        return new VerificationDispatchResponse(channel, destination, GENERIC_VERIFICATION_DISPATCH_HINT, null);
+        return new VerificationDispatchResponse(channel, destination, GENERIC_VERIFICATION_DISPATCH_HINT);
     }
 
     private String fakePasswordHash() {

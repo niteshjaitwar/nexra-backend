@@ -1,10 +1,12 @@
 package com.nexra.hrms.nexra.modules.auth;
 
-import com.jayway.jsonpath.JsonPath;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import com.nexra.hrms.nexra.modules.auth.repository.RefreshTokenRepository;
 import com.nexra.hrms.nexra.modules.auth.repository.TenantRepository;
 import com.nexra.hrms.nexra.modules.auth.repository.UserAccountRepository;
 import com.nexra.hrms.nexra.modules.auth.repository.VerificationTokenRepository;
+import com.nexra.hrms.nexra.modules.auth.support.CapturingNotificationService;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,10 +16,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -45,12 +45,16 @@ class AuthSecurityNegativeIntegrationTest {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private CapturingNotificationService notificationCapture;
+
     @BeforeEach
     void setup() {
         verificationTokenRepository.deleteAll();
         refreshTokenRepository.deleteAll();
         userAccountRepository.deleteAll();
         tenantRepository.deleteAll();
+        notificationCapture.clear();
     }
 
     @Test
@@ -128,15 +132,13 @@ class AuthSecurityNegativeIntegrationTest {
             }
             """.formatted(tenantCode, email);
 
-        MvcResult otpRequestResult = mockMvc.perform(post("/api/v1/auth/verification/otp/request")
+        mockMvc.perform(post("/api/v1/auth/verification/otp/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(otpRequestPayload))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true))
-            .andReturn();
+            .andExpect(jsonPath("$.success").value(true));
 
-        String otpRequestBody = otpRequestResult.getResponse().getContentAsString();
-        String otp = JsonPath.read(otpRequestBody, "$.data.rawTokenForDevOnly");
+        String otp = notificationCapture.lastOtp(email);
 
         String invalidOtpVerifyPayload = """
             {
@@ -259,8 +261,10 @@ class AuthSecurityNegativeIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data.channel").value("OTP"))
-            .andExpect(jsonPath("$.data.hint").value("If the account exists, the verification message will be sent shortly."))
-            .andExpect(jsonPath("$.data.rawTokenForDevOnly").value(nullValue()));
+            .andExpect(jsonPath("$.data.hint").value("If the account exists, the verification message will be sent shortly."));
+
+        assertNull(notificationCapture.lastOtp("missing.user@nexra.local"),
+            "No OTP should be dispatched for an unknown account.");
     }
 
     @Test

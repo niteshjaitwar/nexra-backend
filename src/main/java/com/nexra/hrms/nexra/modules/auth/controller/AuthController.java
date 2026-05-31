@@ -7,19 +7,31 @@ import com.nexra.hrms.nexra.modules.auth.dto.request.RefreshTokenRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.RegisterRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.VerificationRequest;
 import com.nexra.hrms.nexra.common.api.ApiResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.request.MfaVerifySetupRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.request.PasswordResetConfirmRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.response.AuthMeResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.AuthSessionResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.MfaEnableResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.MfaSetupResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.TokenPairResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.UserProfileResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.VerificationDispatchResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.VerificationResultResponse;
+import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
 import com.nexra.hrms.nexra.modules.auth.service.AuthService;
+import com.nexra.hrms.nexra.common.exception.NexraUnauthorizedException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -79,6 +91,87 @@ public class AuthController {
         log.info("AuthController() - login() - Login endpoint invoked, tenantCode={}, email={}", request.tenantCode(), maskEmail(request.email()));
         TokenPairResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Login successful.", response));
+    }
+
+    @Operation(summary = "GET /api/v1/auth/me", description = "Returns the authenticated user's profile and entitlements.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile returned."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required.")
+    })
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<AuthMeResponse>> me(@AuthenticationPrincipal final JwtPrincipal principal) {
+        if (principal == null || principal.userId() == null) {
+            throw new NexraUnauthorizedException("Authentication is required.");
+        }
+        return ResponseEntity.ok(ApiResponse.success(
+            "Authenticated profile fetched.",
+            authService.getCurrentUser(principal.userId())
+        ));
+    }
+
+    @Operation(summary = "Confirm password reset with OTP")
+    @PostMapping("/password/reset/confirm")
+    public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(@Valid @RequestBody final PasswordResetConfirmRequest request) {
+        authService.confirmPasswordReset(request);
+        return ResponseEntity.ok(ApiResponse.success("Password reset successfully.", null));
+    }
+
+    @Operation(summary = "Begin TOTP MFA setup")
+    @PostMapping("/mfa/setup")
+    public ResponseEntity<ApiResponse<MfaSetupResponse>> setupMfa(@AuthenticationPrincipal final JwtPrincipal principal) {
+        requirePrincipal(principal);
+        return ResponseEntity.ok(ApiResponse.success(
+            "MFA setup initiated.",
+            authService.setupMfa(principal.userId())
+        ));
+    }
+
+    @Operation(summary = "Verify TOTP and enable MFA")
+    @PostMapping("/mfa/verify-setup")
+    public ResponseEntity<ApiResponse<MfaEnableResponse>> verifyMfaSetup(
+        @AuthenticationPrincipal final JwtPrincipal principal,
+        @Valid @RequestBody final MfaVerifySetupRequest request
+    ) {
+        requirePrincipal(principal);
+        return ResponseEntity.ok(ApiResponse.success(
+            "MFA enabled successfully.",
+            authService.verifyMfaSetup(principal.userId(), request)
+        ));
+    }
+
+    @Operation(summary = "Disable MFA")
+    @PostMapping("/mfa/disable")
+    public ResponseEntity<ApiResponse<Void>> disableMfa(
+        @AuthenticationPrincipal final JwtPrincipal principal,
+        @Valid @RequestBody final MfaVerifySetupRequest request
+    ) {
+        requirePrincipal(principal);
+        authService.disableMfa(principal.userId(), request);
+        return ResponseEntity.ok(ApiResponse.success("MFA disabled successfully.", null));
+    }
+
+    @Operation(summary = "List active sessions")
+    @GetMapping("/sessions")
+    public ResponseEntity<ApiResponse<List<AuthSessionResponse>>> listSessions(
+        @AuthenticationPrincipal final JwtPrincipal principal,
+        @RequestParam(required = false) final String currentRefreshToken
+    ) {
+        requirePrincipal(principal);
+        return ResponseEntity.ok(ApiResponse.success(
+            "Active sessions listed.",
+            authService.listSessions(principal.userId(), currentRefreshToken)
+        ));
+    }
+
+    @Operation(summary = "Revoke all sessions")
+    @PostMapping("/sessions/revoke-all")
+    public ResponseEntity<ApiResponse<Void>> revokeAllSessions(
+        @AuthenticationPrincipal final JwtPrincipal principal,
+        @RequestBody(required = false) final RefreshTokenRequest keepCurrent
+    ) {
+        requirePrincipal(principal);
+        authService.revokeAllSessions(principal.userId(), keepCurrent);
+        return ResponseEntity.ok(ApiResponse.success("Sessions revoked successfully.", null));
     }
 
     /**
@@ -216,5 +309,11 @@ public class AuthController {
             return "***";
         }
         return email.charAt(0) + "***" + email.substring(at);
+    }
+
+    private void requirePrincipal(final JwtPrincipal principal) {
+        if (principal == null || principal.userId() == null) {
+            throw new NexraUnauthorizedException("Authentication is required.");
+        }
     }
 }

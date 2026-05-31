@@ -35,7 +35,6 @@ public class AuthProperties {
     private int otpExpiryMinutes;
     @Min(1)
     private int linkExpiryMinutes;
-    private boolean exposeVerificationTokenInResponse;
 
     /**
      * Encapsulates JWT signing and lifetime properties.

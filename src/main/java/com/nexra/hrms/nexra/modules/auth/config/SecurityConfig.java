@@ -115,7 +115,8 @@ public class SecurityConfig {
                     "/api/v1/auth/verification/otp/request",
                     "/api/v1/auth/verification/otp/verify",
                     "/api/v1/auth/verification/link/request",
-                    "/api/v1/auth/verification/link/verify"
+                    "/api/v1/auth/verification/link/verify",
+                    "/api/v1/auth/password/reset/confirm"
                 ).permitAll()
                 .requestMatchers("/api/v1/dev/**").hasRole("PLATFORM_ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/tenants/**").hasRole("PLATFORM_ADMIN")

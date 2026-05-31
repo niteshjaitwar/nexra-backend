@@ -3,20 +3,16 @@ package com.nexra.hrms.nexra.modules.hrms.controller;
 import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.common.exception.NexraUnauthorizedException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
+import com.nexra.hrms.nexra.common.workflow.WorkflowProperties;
+import com.nexra.hrms.nexra.common.workflow.WorkflowRuntime;
 import com.nexra.hrms.nexra.modules.auth.security.JwtPrincipal;
-import com.nexra.hrms.nexra.modules.hrms.attendance.repository.AttendanceRecordRepository;
-import com.nexra.hrms.nexra.modules.hrms.leave.repository.LeaveRequestRepository;
-import com.nexra.hrms.nexra.modules.hrms.timesheet.repository.TimesheetEntryRepository;
-import com.nexra.hrms.nexra.modules.hrms.employee.repository.EmployeeRepository;
-import com.nexra.hrms.nexra.modules.payroll.repository.PayrollSlipRepository;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import com.nexra.hrms.nexra.modules.hrms.service.HrmsProductSummaryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.time.Instant;
-import java.time.LocalDate;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -45,87 +41,59 @@ public class HrmsProductController {
         "attendance",
         "leave",
         "timesheet",
-        "payroll"
+        "payroll",
+        "expense",
+        "onboarding",
+        "performance",
+        "recruitment"
     );
 
-    private final EmployeeRepository employeeRepository;
-    private final LeaveRequestRepository leaveRequestRepository;
-    private final AttendanceRecordRepository attendanceRecordRepository;
-    private final TimesheetEntryRepository timesheetEntryRepository;
-    private final PayrollSlipRepository payrollSlipRepository;
+    private final HrmsProductSummaryService productSummaryService;
+    private final WorkflowRuntime workflowRuntime;
+    private final WorkflowProperties workflowProperties;
 
+    @GetMapping("/modules/{moduleKey}/summary")
     @Operation(summary = "Get HRMS module summary", description = "Returns tenant-scoped operational summary for a supported HRMS module.")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Module summary fetched successfully."),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid module key."),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required.")
     })
-    @GetMapping("/modules/{moduleKey}/summary")
     public ResponseEntity<ApiResponse<Map<String, Object>>> moduleSummary(
         @PathVariable @NotBlank @Size(max = 80) final String moduleKey
     ) {
         final String tenantCode = resolveTenantCode();
         validateModuleKey(moduleKey);
-        final long queueCount = computeQueueCount(tenantCode, moduleKey);
-        final long pendingApprovals = computePendingApprovals(tenantCode, moduleKey);
-        final int throughputPercent = (int) Math.max(35L, Math.min(98L, 100L - (pendingApprovals * 100L / Math.max(1L, queueCount))));
-
+        final HrmsProductSummaryService.ModuleSummaryCounts counts = productSummaryService.resolveCounts(tenantCode, moduleKey);
         return ResponseEntity.ok(ApiResponse.ok(Map.of(
             "key", moduleKey,
-            "queueCount", queueCount,
-            "pendingApprovals", pendingApprovals,
-            "throughputPercent", throughputPercent
+            "queueCount", counts.queueCount(),
+            "pendingApprovals", counts.pendingApprovals(),
+            "throughputPercent", counts.throughputPercent()
         ), "HRMS module summary fetched successfully."));
     }
 
-    @Operation(summary = "Submit HRMS workflow", description = "Accepts tenant-scoped workflow payload for a supported HRMS module.")
-    @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Workflow accepted."),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid payload or unsupported module key."),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Authentication required.")
-    })
     @PostMapping("/workflow")
+    @Operation(summary = "Submit HRMS workflow", description = "Accepts tenant-scoped workflow payload for a supported HRMS module.")
     public ResponseEntity<ApiResponse<Map<String, Object>>> workflow(@RequestBody final HrmsWorkflowRequest request) {
         final String tenantCode = resolveTenantCode();
         validateModuleKey(request.moduleKey());
+        final WorkflowRuntime.WorkflowSubmissionResult submission = workflowRuntime.submit(
+            tenantCode,
+            "HRMS",
+            request.moduleKey(),
+            workflowProperties.getHrmsSubmitTrigger(),
+            request.actorEmail(),
+            request.payload()
+        );
         return ResponseEntity.ok(ApiResponse.ok(Map.of(
             "accepted", true,
             "tenantCode", tenantCode,
             "moduleKey", request.moduleKey(),
-            "receivedAt", Instant.now().toString(),
-            "workflowRef", "hrms-" + System.nanoTime()
+            "receivedAt", submission.receivedAt(),
+            "workflowRef", submission.workflowRef(),
+            "status", submission.status()
         ), "HRMS workflow accepted successfully."));
-    }
-
-    private long computeQueueCount(final String tenantCode, final String moduleKey) {
-        return switch (moduleKey) {
-            case "employee-core" -> employeeRepository.countByTenantCodeIgnoreCaseAndActiveTrue(tenantCode);
-            case "leave" -> leaveRequestRepository.findByTenantCodeIgnoreCaseOrderByCreatedAtDesc(tenantCode).size();
-            case "attendance" -> attendanceRecordRepository
-                .findByTenantCodeIgnoreCaseAndWorkDateBetweenOrderByWorkDateAsc(tenantCode, LocalDate.now().minusDays(30), LocalDate.now())
-                .size();
-            case "timesheet" -> timesheetEntryRepository.findByTenantCodeIgnoreCaseOrderByCreatedAtDesc(tenantCode).size();
-            case "payroll" -> payrollSlipRepository.findByTenantCodeIgnoreCaseOrderByGeneratedAtDesc(tenantCode).size();
-            default -> employeeRepository.countByTenantCodeIgnoreCaseAndActiveTrue(tenantCode)
-                + leaveRequestRepository.findByTenantCodeIgnoreCaseOrderByCreatedAtDesc(tenantCode).size();
-        };
-    }
-
-    private long computePendingApprovals(final String tenantCode, final String moduleKey) {
-        return switch (moduleKey) {
-            case "leave" -> leaveRequestRepository.findByTenantCodeIgnoreCaseOrderByCreatedAtDesc(tenantCode).stream()
-                .filter((row) -> "SUBMITTED".equalsIgnoreCase(row.getStatus()) || "PENDING".equalsIgnoreCase(row.getStatus()))
-                .count();
-            case "timesheet" -> timesheetEntryRepository.findByTenantCodeIgnoreCaseOrderByCreatedAtDesc(tenantCode).stream()
-                .filter((row) -> "SUBMITTED".equalsIgnoreCase(row.getStatus()) || "PENDING".equalsIgnoreCase(row.getStatus()))
-                .count();
-            case "attendance" -> attendanceRecordRepository
-                .findByTenantCodeIgnoreCaseAndWorkDateBetweenOrderByWorkDateAsc(tenantCode, LocalDate.now().minusDays(30), LocalDate.now())
-                .stream()
-                .filter((row) -> row.getCheckOutAt() == null)
-                .count();
-            default -> Math.max(1L, computeQueueCount(tenantCode, moduleKey) / 4L);
-        };
     }
 
     private String resolveTenantCode() {

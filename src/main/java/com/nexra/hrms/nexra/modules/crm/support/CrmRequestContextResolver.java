@@ -94,6 +94,21 @@ public class CrmRequestContextResolver {
     }
 
     /**
+     * Resolves the authenticated actor email for audit attribution. Returns null
+     * when no principal is present (dev-only flows with auth disabled) so audit
+     * recording remains non-blocking.
+     *
+     * @return actor email or null.
+     */
+    public String resolveActorEmail() {
+        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof JwtPrincipal principal) {
+            return principal.email();
+        }
+        return null;
+    }
+
+    /**
      * Enforces CRM product access.
      *
      * @param principal authenticated principal.

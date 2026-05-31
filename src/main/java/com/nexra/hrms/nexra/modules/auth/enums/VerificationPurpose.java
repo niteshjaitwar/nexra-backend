@@ -8,5 +8,6 @@ package com.nexra.hrms.nexra.modules.auth.enums;
  */
 public enum VerificationPurpose {
     ACCOUNT_VERIFICATION,
-    LOGIN_PASSWORDLESS
+    LOGIN_PASSWORDLESS,
+    PASSWORD_RESET
 }

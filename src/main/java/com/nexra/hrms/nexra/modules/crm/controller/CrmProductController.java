@@ -2,10 +2,9 @@ package com.nexra.hrms.nexra.modules.crm.controller;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
+import com.nexra.hrms.nexra.common.security.NexraPermission;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
-import com.nexra.hrms.nexra.modules.crm.model.CrmLeadStatus;
-import com.nexra.hrms.nexra.modules.crm.repository.CrmDealRepository;
-import com.nexra.hrms.nexra.modules.crm.repository.CrmLeadRepository;
+import com.nexra.hrms.nexra.modules.crm.service.CrmPipelineMetricsService;
 import com.nexra.hrms.nexra.modules.crm.support.CrmRequestContextResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -16,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,8 +38,7 @@ public class CrmProductController {
         "campaigns-marketing"
     );
 
-    private final CrmLeadRepository crmLeadRepository;
-    private final CrmDealRepository crmDealRepository;
+    private final CrmPipelineMetricsService pipelineMetricsService;
     private final CrmProperties crmProperties;
     private final CrmRequestContextResolver requestContextResolver;
 
@@ -51,27 +50,16 @@ public class CrmProductController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access is missing.")
     })
     @GetMapping("/modules/{moduleKey}/pipeline")
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_READ + "')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> pipelineSnapshot(
         @PathVariable @NotBlank @Size(max = 80) final String moduleKey
     ) {
         final String tenantCode = resolveTenantCode();
         validateModuleKey(moduleKey);
-        final long totalLeads = crmLeadRepository.countByTenantCodeIgnoreCase(tenantCode);
-        final long wonLeadCount = crmLeadRepository.countByTenantCodeIgnoreCaseAndStatus(tenantCode, CrmLeadStatus.WON);
-        final long totalDeals = crmDealRepository.countByTenantCodeIgnoreCase(tenantCode);
-        final long wonDeals = crmDealRepository.countByTenantCodeIgnoreCaseAndStageIgnoreCase(tenantCode, "WON");
-        final long openDeals = Math.max(0L, totalDeals - wonDeals);
-        final long estimatedOpenPipelineValue = openDeals * 125000L;
-
-        return ResponseEntity.ok(ApiResponse.ok(Map.of(
-            "moduleKey", moduleKey,
-            "totalLeads", totalLeads,
-            "wonLeadCount", wonLeadCount,
-            "totalDeals", totalDeals,
-            "wonDeals", wonDeals,
-            "openDeals", openDeals,
-            "openPipelineValue", estimatedOpenPipelineValue
-        ), "CRM pipeline snapshot fetched successfully."));
+        return ResponseEntity.ok(ApiResponse.ok(
+            pipelineMetricsService.snapshot(tenantCode, moduleKey),
+            "CRM pipeline snapshot fetched successfully."
+        ));
     }
 
     private String resolveTenantCode() {

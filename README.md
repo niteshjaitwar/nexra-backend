@@ -1,82 +1,70 @@
 # Nexra Backend
 
-Production-grade Spring Boot modular monolith powering **Nexra HRMS + CRM**.
+Spring Boot backend for **Nexra HRMS and CRM**, organized as a modular monolith with clear module boundaries and shared platform conventions.
 
 ## Overview
 
-Nexra Backend is a single Spring Boot runtime with strict internal module boundaries, shared cross-cutting standards, and CI-enforced quality gates.  
-It is designed for fast feature delivery without microservice complexity while preserving enterprise reliability.
+Nexra Backend runs as a single Spring Boot application. Each domain module (auth, HRMS, payroll, CRM, operations, workflow) keeps its own controllers, services, and persistence while sharing common API contracts, security, logging, and database migration practices.
 
-- **Architecture**: Modular monolith
-- **Primary domain**: HRMS + CRM
-- **Current status**: Production-ready service baseline with verified module hardening
+- **Architecture:** modular monolith
+- **Domains:** HRMS, CRM, payroll, operations, workflow
+- **Database:** MySQL at runtime, H2 in tests
+- **Schema:** Flyway migrations (currently v62)
 
-## Implemented Modules
+## Modules
 
-- `auth`
-- `hrms.employee`
-- `hrms.attendance`
-- `hrms.leave`
-- `hrms.timesheet`
-- `hrms.onboarding`
-- `hrms.performance`
-- `hrms.recruitment`
-- `hrms.expense`
-- `payroll`
-- `crm` (tenant-isolated leads, accounts, contacts, deals, activities, tasks, workflows, webhooks, and audit trails)
+| Module | Scope |
+| --- | --- |
+| `auth` | Registration, login, MFA, sessions, OAuth2, tenants |
+| `hrms.employee` | Organization profile, departments, employees |
+| `hrms.attendance` | Shifts, punch records, regularization |
+| `hrms.leave` | Leave types, balances, requests |
+| `hrms.timesheet` | Projects, time entries |
+| `hrms.onboarding` | Onboarding workflows |
+| `hrms.performance` | Performance reviews |
+| `hrms.recruitment` | Job postings and candidates |
+| `hrms.expense` | Expense claims |
+| `payroll` | Payslips, statutory packs, filing export (JSON/XML) |
+| `crm` | Leads, accounts, contacts, deals, campaigns, quotes, cases, webhooks |
+| `operations` | Projects, tasks, approvals |
+| `workflow` | Multi-step workflow runtime with SLA support |
 
-## Core Engineering Standards
+## Platform conventions
 
-- Shared API contract via canonical `ApiResponse`
-- Shared exception model with centralized global handling
-- Shared request correlation (`X-Request-Id`) and hardened security headers
-- Shared global rate limiting with bounded in-memory key strategy
-- Shared auditing and optimistic locking (`@Version`) via common persistence base
-- Flyway-first schema evolution
-- CRM webhook HMAC verification with timestamp skew checks and replay protection
-- OpenAPI + actuator + Prometheus-ready metrics
-- CI gates: Maven enforcer + JaCoCo coverage check
+- Canonical `ApiResponse` wrapper for REST endpoints
+- Centralized exception handling and request correlation (`X-Request-Id`)
+- Security headers (HSTS, CSP, frame options, referrer policy)
+- Rate limiting with optional Redis-backed distributed mode
+- Optimistic locking via `@Version` on shared persistence base entities
+- OpenAPI documentation and Actuator health/metrics endpoints
+- CRM webhook HMAC verification with timestamp skew and replay protection
+- CI: Maven verify, JaCoCo coverage gate, OWASP dependency-check, CodeQL, Trivy
 
-## Tech Stack
+## Tech stack
 
 - Java 25
 - Spring Boot 4
 - Spring Security + OAuth2 Authorization Server
 - Spring Data JPA + Flyway
-- MySQL (runtime), H2 (tests)
-- Redis (auth hardening flows)
-- Micrometer + Prometheus registry
+- Redis (auth throttling and rate limiting)
+- Micrometer + Prometheus
 - OpenTelemetry tracing
-- Thymeleaf + OpenHTMLToPDF + PDFBox (payslips)
+- Thymeleaf + OpenHTMLToPDF + PDFBox (payslip PDF generation)
 
-## Project Structure
+## Project layout
 
 ```text
 src/main/java/com/nexra/hrms/nexra/
-  common/
-    api/
-    exception/
-    logging/
-    openapi/
-    persistence/
-    ratelimit/
-    web/
+  common/          # shared API, security, logging, rate limiting, workflow
   modules/
     auth/
     crm/
-    hrms/
-      attendance/
-      employee/
-      expense/
-      leave/
-      onboarding/
-      performance/
-      recruitment/
-      timesheet/
+    hrms/          # attendance, employee, expense, leave, onboarding, ...
+    operations/
     payroll/
 ```
 
-## Run Locally
+## Run locally
 
 ### Linux / macOS
 
@@ -90,42 +78,39 @@ src/main/java/com/nexra/hrms/nexra/
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-`dev` uses local workstation defaults for the auth datasource and auth secrets.
-Override them with `AUTH_DB_*`, `AUTH_JWT_SECRET`, and
-`AUTH_OAUTH2_DEFAULT_CLIENT_SECRET` when your local MySQL credentials differ.
+The `dev` profile uses local defaults for the database and auth secrets. Override with `AUTH_DB_*`, `AUTH_JWT_SECRET`, and `AUTH_OAUTH2_DEFAULT_CLIENT_SECRET` when your local MySQL setup differs.
 
-## Runtime Profiles
+## Profiles
 
-The application includes environment-specific property sets for `dev`, `test`, `e2e`, `stage`, and `prod`, plus module-specific overlays for auth, CRM, HRMS, payroll, and expense domains.
+Environment-specific property sets exist for `dev`, `test`, `e2e`, `stage`, and `prod`, with module overlays for auth, CRM, HRMS, payroll, expense, and workflow.
 
-## Verify Quality Gates
+## Build and test
 
 ```bash
 ./mvnw verify
 ```
 
-This executes:
-- compile + unit/integration tests
-- module production validator tests
-- JaCoCo coverage check
-- enforcer baseline rules
+This runs compilation, unit and integration tests, JaCoCo coverage checks, and Maven enforcer rules.
 
-## API Surface
+## API routes
 
-- `/api/v1/auth/*`
-- `/api/v1/employee-core/*`
-- `/api/v1/attendance/*`
-- `/api/v1/leave/*`
-- `/api/v1/timesheet/*`
-- `/api/v1/payroll/*`
-- `/api/v1/crm/*`
+| Prefix | Domain |
+| --- | --- |
+| `/api/v1/auth/*` | Authentication and sessions |
+| `/api/v1/employee-core/*` | Employee and organization |
+| `/api/v1/attendance/*` | Attendance |
+| `/api/v1/leave/*` | Leave management |
+| `/api/v1/timesheet/*` | Timesheets |
+| `/api/v1/payroll/*` | Payroll and statutory filings |
+| `/api/v1/crm/*` | CRM |
+| `/api/v1/operations/*` | Operations |
+| `/api/v1/workflows/*` | Workflow engine |
 
 ## Documentation
 
-- `instruction.md` is the primary project instruction document.
-- `README.md` is the primary project overview document.
-- Other markdown documentation has been intentionally removed from this repository per current policy.
+- `instruction.md` — project conventions and contributor guidance
+- `PRODUCTION_READINESS.md` — code-level readiness notes and deployment checklist
 
 ## License
 
-Proprietary - Nexra internal platform.
+Proprietary — Nexra internal platform.

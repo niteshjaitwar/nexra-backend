@@ -2,6 +2,7 @@ package com.nexra.hrms.nexra.modules.crm.controller;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.common.api.PageResponse;
+import com.nexra.hrms.nexra.common.security.NexraPermission;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmAccountCreateRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmAccountUpdateRequest;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,6 +45,7 @@ public class CrmAccountController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access missing.")
     })
     @PostMapping
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_WRITE + "')")
     public ResponseEntity<ApiResponse<CrmAccount>> create(@Valid @RequestBody final CrmAccountCreateRequest request) {
         return ResponseEntity.status(201).body(ApiResponse.created(
             service.create(resolveTenantCode(), request, resolveCrmAccessScope()),
@@ -58,6 +61,7 @@ public class CrmAccountController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM account not found.")
     })
     @GetMapping("/{accountId}")
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_READ + "')")
     public ResponseEntity<ApiResponse<CrmAccount>> getById(@PathVariable final String accountId) {
         return ResponseEntity.ok(ApiResponse.ok(
             service.findById(resolveTenantCode(), accountId, resolveCrmAccessScope()),
@@ -73,6 +77,7 @@ public class CrmAccountController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "Invalid pagination parameters.")
     })
     @GetMapping
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_READ + "')")
     public ResponseEntity<ApiResponse<PageResponse<CrmAccount>>> list(
         @RequestParam(defaultValue = "0") final int page,
         @RequestParam(defaultValue = "20") final int size
@@ -92,6 +97,7 @@ public class CrmAccountController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM account not found.")
     })
     @PutMapping("/{accountId}")
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_WRITE + "')")
     public ResponseEntity<ApiResponse<CrmAccount>> update(
         @PathVariable final String accountId,
         @Valid @RequestBody final CrmAccountUpdateRequest request
@@ -110,6 +116,7 @@ public class CrmAccountController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM account not found.")
     })
     @DeleteMapping("/{accountId}")
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_WRITE + "')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable final String accountId) {
         service.delete(resolveTenantCode(), accountId, resolveCrmAccessScope());
         return ResponseEntity.ok(ApiResponse.empty("CRM account deleted successfully."));

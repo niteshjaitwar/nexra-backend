@@ -150,7 +150,7 @@ class CrmLeadIntegrationTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.success").value(false))
-            .andExpect(jsonPath("$.message").value("User does not have CRM product access."));
+            .andExpect(jsonPath("$.message").value("You are not allowed to perform this action."));
     }
 
     @Test

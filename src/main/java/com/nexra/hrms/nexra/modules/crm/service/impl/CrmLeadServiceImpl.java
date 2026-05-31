@@ -13,6 +13,7 @@ import com.nexra.hrms.nexra.modules.crm.dto.request.CrmLeadUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmAccountEntity;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmActivityEntity;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmContactEntity;
+import com.nexra.hrms.nexra.modules.crm.entity.CrmCampaignEntity;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmDealEntity;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmLeadEntity;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLead;
@@ -20,11 +21,14 @@ import com.nexra.hrms.nexra.modules.crm.model.CrmLeadConversionResult;
 import com.nexra.hrms.nexra.modules.crm.model.CrmLeadStatus;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmAccountRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmActivityRepository;
+import com.nexra.hrms.nexra.modules.crm.repository.CrmCampaignRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmContactRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmDealRepository;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmLeadRepository;
 import com.nexra.hrms.nexra.modules.crm.service.CrmLeadService;
+import com.nexra.hrms.nexra.common.workflow.CrmWorkflowExecutor;
 import com.nexra.hrms.nexra.modules.crm.support.CrmAccessScope;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -52,11 +56,13 @@ public class CrmLeadServiceImpl implements CrmLeadService {
 
     private final CrmProperties properties;
     private final CrmLeadRepository repository;
+    private final CrmCampaignRepository campaignRepository;
     private final CrmAccountRepository accountRepository;
     private final CrmContactRepository contactRepository;
     private final CrmDealRepository dealRepository;
     private final CrmActivityRepository activityRepository;
     private final AuditEventService auditEventService;
+    private final CrmWorkflowExecutor crmWorkflowExecutor;
 
     /**
      * Creates a new CRM lead with normalized text fields and NEW status.
@@ -78,7 +84,16 @@ public class CrmLeadServiceImpl implements CrmLeadService {
         entity.setEmail(normalizedEmail);
         entity.setPhone(normalizeNullable(request.phone()));
         entity.setCompany(normalize(request.company()));
-        entity.setSource(normalizeNullable(request.source()));
+        final String campaignId = normalizeNullable(request.campaignId());
+        String source = normalizeNullable(request.source());
+        if (campaignId != null) {
+            final var campaign = resolveActiveCampaign(normalizedTenantCode, campaignId);
+            entity.setCampaignId(campaignId);
+            if (source == null) {
+                source = "CAMPAIGN:" + campaign.getName();
+            }
+        }
+        entity.setSource(source);
         entity.setOwnerUserId(normalize(request.ownerUserId()));
         entity.setNotes(normalizeNullable(request.notes()));
         entity.setStatus(CrmLeadStatus.NEW);
@@ -89,6 +104,13 @@ public class CrmLeadServiceImpl implements CrmLeadService {
         auditEventService.record(AuditEventRecord.of(normalizedTenantCode, "CRM", "CREATE_LEAD", "SUCCESS")
             .withActor(saved.getOwnerUserId(), null)
             .withTarget("CRM_LEAD", saved.getId()));
+        crmWorkflowExecutor.onEvent(
+            normalizedTenantCode,
+            "crm-leads",
+            "LEAD_CREATED",
+            request.ownerUserId(),
+            Map.of("leadId", saved.getId(), "status", saved.getStatus().name())
+        );
         return toModel(saved);
     }
 
@@ -173,6 +195,38 @@ public class CrmLeadServiceImpl implements CrmLeadService {
         );
     }
 
+    @Override
+    public PageResponse<CrmLead> listByCampaign(
+        final String tenantCode,
+        final String campaignId,
+        final int page,
+        final int size,
+        final CrmAccessScope accessScope
+    ) {
+        final String normalizedTenantCode = normalizeTenantCode(tenantCode);
+        validatePaging(page, size);
+        loadCampaign(normalizedTenantCode, normalize(campaignId));
+        final Page<CrmLeadEntity> result = repository
+            .findAllByTenantCodeIgnoreCaseAndCampaignIdOrderByDomainUpdatedAtDescIdDesc(
+                normalizedTenantCode,
+                normalize(campaignId),
+                PageRequest.of(page, size)
+            );
+        final List<CrmLead> items = result.getContent().stream()
+            .filter((entity) -> isVisibleForAccessScope(entity, accessScope))
+            .map(this::toModel)
+            .toList();
+        return new PageResponse<>(
+            items,
+            result.getNumber(),
+            result.getSize(),
+            result.getTotalElements(),
+            result.getTotalPages(),
+            result.hasNext(),
+            result.hasPrevious()
+        );
+    }
+
     /**
      * Deletes a lead by id.
      *
@@ -236,6 +290,7 @@ public class CrmLeadServiceImpl implements CrmLeadService {
             entity.getPhone(),
             entity.getCompany(),
             entity.getSource(),
+            entity.getCampaignId(),
             entity.getOwnerUserId(),
             entity.getNotes(),
             entity.getStatus(),
@@ -382,14 +437,30 @@ public class CrmLeadServiceImpl implements CrmLeadService {
     }
 
     private void ensureVisibleForAccessScope(final CrmLeadEntity entity, final CrmAccessScope accessScope, final String leadId) {
+        if (!isVisibleForAccessScope(entity, accessScope)) {
+            throw new NexraNotFoundException("CRM lead not found for id: " + leadId);
+        }
+    }
+
+    private boolean isVisibleForAccessScope(final CrmLeadEntity entity, final CrmAccessScope accessScope) {
         if (accessScope.privileged()) {
-            return;
+            return true;
         }
         final String actorUserId = requireActorUserId(accessScope);
-        if (actorUserId.equals(entity.getOwnerUserId())) {
-            return;
+        return actorUserId.equals(entity.getOwnerUserId());
+    }
+
+    private CrmCampaignEntity loadCampaign(final String tenantCode, final String campaignId) {
+        return campaignRepository.findByIdAndTenantCodeIgnoreCase(campaignId, tenantCode)
+            .orElseThrow(() -> new NexraNotFoundException("CRM campaign not found for id: " + campaignId));
+    }
+
+    private CrmCampaignEntity resolveActiveCampaign(final String tenantCode, final String campaignId) {
+        final CrmCampaignEntity campaign = loadCampaign(tenantCode, campaignId);
+        if (!"ACTIVE".equalsIgnoreCase(campaign.getStatus())) {
+            throw new NexraValidationException("Leads can only be attributed to ACTIVE campaigns.");
         }
-        throw new NexraNotFoundException("CRM lead not found for id: " + leadId);
+        return campaign;
     }
 
     private void enforceOwnerAccess(final CrmAccessScope accessScope, final String targetOwnerUserId) {

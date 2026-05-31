@@ -51,6 +51,24 @@ public interface CrmLeadService {
     PageResponse<CrmLead> list(String tenantCode, int page, int size, CrmAccessScope accessScope);
 
     /**
+     * Lists leads attributed to a specific marketing campaign.
+     *
+     * @param tenantCode tenant scope.
+     * @param campaignId campaign identifier.
+     * @param page zero-based page index.
+     * @param size requested page size.
+     * @param accessScope caller access scope.
+     * @return paged lead collection.
+     */
+    PageResponse<CrmLead> listByCampaign(
+        String tenantCode,
+        String campaignId,
+        int page,
+        int size,
+        CrmAccessScope accessScope
+    );
+
+    /**
      * Converts a lead into account, contact, and deal records.
      *
      * @param tenantCode tenant scope.

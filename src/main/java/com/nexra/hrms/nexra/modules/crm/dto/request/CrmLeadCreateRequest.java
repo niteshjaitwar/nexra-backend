@@ -37,6 +37,9 @@ public record CrmLeadCreateRequest(
     @Size(max = 80, message = "Source must not exceed 80 characters.")
     String source,
 
+    @Size(max = 36, message = "Campaign id must not exceed 36 characters.")
+    String campaignId,
+
     @NotBlank(message = "Owner user id is required.")
     @Size(max = 120, message = "Owner user id must not exceed 120 characters.")
     String ownerUserId,

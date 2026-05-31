@@ -15,10 +15,6 @@ The backend must be treated as a modular monolith, not a microservice system. Ke
 
 Reference requirement docs:
 
-- `docs/backend-requirements/00-market-launch-requirements.md`
-- `docs/backend-requirements/01-platform-shared-requirements.md`
-- `docs/backend-requirements/14-launch-gates.md`
-
 ## 2. Core Engineering Rules
 
 Every change must follow these rules:
@@ -113,7 +109,6 @@ High-sensitivity areas:
 - Payroll
 - Employee personal data
 - Bank/tax/statutory identifiers
-- Documents
 - Audit logs
 - Admin and product access
 

@@ -36,6 +36,8 @@ public class LeaveRequestEntity extends AbstractAuditableEntity {
     private String approverEmail;
     @Column(name = "decision_comment", length = 500)
     private String decisionComment;
+    @Column(name = "workflow_instance_id", length = 36)
+    private String workflowInstanceId;
     public String getId() { return id; }
     public void setId(final String id) { this.id = id; }
     public String getTenantCode() { return tenantCode; }
@@ -60,5 +62,7 @@ public class LeaveRequestEntity extends AbstractAuditableEntity {
     public void setApproverEmail(final String approverEmail) { this.approverEmail = approverEmail; }
     public String getDecisionComment() { return decisionComment; }
     public void setDecisionComment(final String decisionComment) { this.decisionComment = decisionComment; }
+    public String getWorkflowInstanceId() { return workflowInstanceId; }
+    public void setWorkflowInstanceId(final String workflowInstanceId) { this.workflowInstanceId = workflowInstanceId; }
 }
 

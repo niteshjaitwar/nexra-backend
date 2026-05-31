@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 import com.nexra.hrms.nexra.modules.auth.repository.VerificationTokenRepository;
+import com.nexra.hrms.nexra.modules.auth.support.CapturingNotificationService;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -42,11 +43,15 @@ class AuthFlowIntegrationTest {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private CapturingNotificationService notificationCapture;
+
     @BeforeEach
     void setup() {
         verificationTokenRepository.deleteAll();
         refreshTokenRepository.deleteAll();
         userAccountRepository.deleteAll();
+        notificationCapture.clear();
         tenantRepository.findByCodeIgnoreCaseAndActiveTrue("acme").ifPresent(tenantRepository::delete);
     }
 
@@ -113,15 +118,13 @@ class AuthFlowIntegrationTest {
             }
             """;
 
-        MvcResult otpRequestResult = mockMvc.perform(post("/api/v1/auth/verification/otp/request")
+        mockMvc.perform(post("/api/v1/auth/verification/otp/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(otpRequestPayload))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true))
-            .andReturn();
+            .andExpect(jsonPath("$.success").value(true));
 
-        String otpRequestBody = otpRequestResult.getResponse().getContentAsString();
-        String otp = JsonPath.read(otpRequestBody, "$.data.rawTokenForDevOnly");
+        String otp = notificationCapture.lastOtp("user@acme.com");
 
         String otpVerifyPayload = """
             {
@@ -154,7 +157,16 @@ class AuthFlowIntegrationTest {
             .andReturn();
 
         String loginBody = loginResult.getResponse().getContentAsString();
+        String accessToken = JsonPath.read(loginBody, "$.data.accessToken");
         String refreshToken = JsonPath.read(loginBody, "$.data.refreshToken");
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                .header("Authorization", "Bearer " + accessToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.email").value("user@acme.com"))
+            .andExpect(jsonPath("$.data.tenantCode").value("acme"))
+            .andExpect(jsonPath("$.data.firstName").value("Nitesh"));
 
         String refreshPayload = """
             {
@@ -175,15 +187,13 @@ class AuthFlowIntegrationTest {
               "purpose":"LOGIN_PASSWORDLESS"
             }
             """;
-        MvcResult linkRequestResult = mockMvc.perform(post("/api/v1/auth/verification/link/request")
+        mockMvc.perform(post("/api/v1/auth/verification/link/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(linkRequestPayload))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true))
-            .andReturn();
+            .andExpect(jsonPath("$.success").value(true));
 
-        String linkRequestBody = linkRequestResult.getResponse().getContentAsString();
-        String linkToken = JsonPath.read(linkRequestBody, "$.data.rawTokenForDevOnly");
+        String linkToken = notificationCapture.lastLink("user@acme.com");
 
         String linkVerifyPayload = """
             {
@@ -237,12 +247,11 @@ class AuthFlowIntegrationTest {
               "purpose":"ACCOUNT_VERIFICATION"
             }
             """;
-        MvcResult otpRequestResult = mockMvc.perform(post("/api/v1/auth/verification/otp/request")
+        mockMvc.perform(post("/api/v1/auth/verification/otp/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(otpRequestPayload))
-            .andExpect(status().isOk())
-            .andReturn();
-        String otp = JsonPath.read(otpRequestResult.getResponse().getContentAsString(), "$.data.rawTokenForDevOnly");
+            .andExpect(status().isOk());
+        String otp = notificationCapture.lastOtp("oauth.deny@nexra.local");
 
         mockMvc.perform(post("/api/v1/auth/verification/otp/verify")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -363,7 +372,7 @@ class AuthFlowIntegrationTest {
                     """.formatted(tenantCode, email)))
             .andExpect(status().isOk());
 
-        MvcResult otpRequestResult = mockMvc.perform(post("/api/v1/auth/verification/otp/request")
+        mockMvc.perform(post("/api/v1/auth/verification/otp/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
@@ -372,10 +381,9 @@ class AuthFlowIntegrationTest {
                       "purpose":"ACCOUNT_VERIFICATION"
                     }
                     """.formatted(tenantCode, email)))
-            .andExpect(status().isOk())
-            .andReturn();
+            .andExpect(status().isOk());
 
-        String otp = JsonPath.read(otpRequestResult.getResponse().getContentAsString(), "$.data.rawTokenForDevOnly");
+        String otp = notificationCapture.lastOtp(email);
 
         mockMvc.perform(post("/api/v1/auth/verification/otp/verify")
                 .contentType(MediaType.APPLICATION_JSON)

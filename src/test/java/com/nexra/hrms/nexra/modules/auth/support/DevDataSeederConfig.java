@@ -1,4 +1,4 @@
-package com.nexra.hrms.nexra.modules.auth.config.dev;
+package com.nexra.hrms.nexra.modules.auth.support;
 
 import com.nexra.hrms.nexra.modules.auth.entity.Tenant;
 import com.nexra.hrms.nexra.modules.auth.entity.UserAccount;
@@ -55,6 +55,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/**
+ * Test/dev-only seed data configuration. Intentionally lives under {@code src/test}
+ * so it is never packaged into the production artifact. Activated only by the
+ * {@code dev} or {@code e2e} profiles for local development and end-to-end
+ * functional testing; it never runs under the default or {@code prod} profiles.
+ */
 @Slf4j
 @Configuration
 @Profile({"dev", "e2e"})

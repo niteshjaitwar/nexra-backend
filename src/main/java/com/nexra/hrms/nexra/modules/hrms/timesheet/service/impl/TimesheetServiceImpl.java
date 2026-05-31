@@ -2,6 +2,7 @@ package com.nexra.hrms.nexra.modules.hrms.timesheet.service.impl;
 
 import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
 import com.nexra.hrms.nexra.common.audit.AuditEventService;
+import com.nexra.hrms.nexra.common.workflow.WorkflowRuntime;
 import com.nexra.hrms.nexra.modules.hrms.timesheet.dto.request.ProjectUpsertRequest;
 import com.nexra.hrms.nexra.modules.hrms.timesheet.dto.request.TimesheetDecisionRequest;
 import com.nexra.hrms.nexra.modules.hrms.timesheet.dto.request.TimesheetEntryCreateRequest;
@@ -42,9 +43,13 @@ public class TimesheetServiceImpl implements TimesheetService {
     private static final String STATUS_APPROVED = "APPROVED";
     private static final String STATUS_REJECTED = "REJECTED";
 
+    private static final String WORKFLOW_PRODUCT_CODE = "HRMS";
+    private static final String WORKFLOW_MODULE_KEY = "timesheet-approvals";
+
     private final ProjectRepository projectRepository;
     private final TimesheetEntryRepository entryRepository;
     private final AuditEventService auditEventService;
+    private final WorkflowRuntime workflowRuntime;
 
     /**
      * Creates or updates a project.
@@ -134,6 +139,20 @@ public class TimesheetServiceImpl implements TimesheetService {
         entity.setCreatedBy(actor.email());
         entity.setUpdatedBy(actor.email());
         TimesheetEntryEntity saved = entryRepository.save(entity);
+        final WorkflowRuntime.WorkflowSubmissionResult workflow = workflowRuntime.submit(
+            saved.getTenantCode(),
+            WORKFLOW_PRODUCT_CODE,
+            WORKFLOW_MODULE_KEY,
+            "TIMESHEET_ENTRY_SUBMITTED",
+            actor.email(),
+            Map.of(
+                "timesheetEntryId", saved.getId(),
+                "employeeId", saved.getEmployeeId(),
+                "status", saved.getStatus()
+            )
+        );
+        saved.setWorkflowInstanceId(workflow.workflowRef());
+        saved = entryRepository.save(saved);
         recordAudit(saved.getTenantCode(), "CREATE_TIMESHEET_ENTRY", actor, "TIMESHEET_ENTRY", saved.getId());
         return toEntry(saved);
     }
@@ -309,6 +328,27 @@ public class TimesheetServiceImpl implements TimesheetService {
             request.tenantCode(), entryId, approve ? "APPROVE" : "REJECT", actor.email());
         TimesheetEntryEntity saved = entryRepository.save(entry);
         recordAudit(saved.getTenantCode(), approve ? "APPROVE_TIMESHEET_ENTRY" : "REJECT_TIMESHEET_ENTRY", actor, "TIMESHEET_ENTRY", saved.getId());
+        if (saved.getWorkflowInstanceId() != null) {
+            workflowRuntime.advance(
+                saved.getTenantCode(),
+                saved.getWorkflowInstanceId(),
+                approve,
+                actor.email(),
+                blankToNull(request.comment())
+            );
+        } else {
+            workflowRuntime.submit(
+                saved.getTenantCode(),
+                WORKFLOW_PRODUCT_CODE,
+                WORKFLOW_MODULE_KEY,
+                approve ? "TIMESHEET_ENTRY_APPROVED" : "TIMESHEET_ENTRY_REJECTED",
+                actor.email(),
+                Map.of(
+                    "timesheetEntryId", saved.getId(),
+                    "status", saved.getStatus()
+                )
+            );
+        }
         return toEntry(saved);
     }
 

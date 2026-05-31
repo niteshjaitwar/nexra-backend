@@ -18,4 +18,12 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     // Paginated queries
     Page<AttendanceRecordEntity> findByTenantCodeIgnoreCaseAndWorkDateBetween(String tenantCode, LocalDate fromDate, LocalDate toDate, Pageable pageable);
     Page<AttendanceRecordEntity> findByTenantCodeIgnoreCaseAndEmployeeIdAndWorkDateBetween(String tenantCode, String employeeId, LocalDate fromDate, LocalDate toDate, Pageable pageable);
+
+    long countByTenantCodeIgnoreCaseAndWorkDateBetween(String tenantCode, LocalDate fromDate, LocalDate toDate);
+
+    long countByTenantCodeIgnoreCaseAndWorkDateBetweenAndCheckOutAtIsNull(
+        String tenantCode,
+        LocalDate fromDate,
+        LocalDate toDate
+    );
 }

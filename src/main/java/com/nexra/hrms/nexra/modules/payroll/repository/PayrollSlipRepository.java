@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface PayrollSlipRepository extends JpaRepository<PayrollSlipEntity, String> {
 
     List<PayrollSlipEntity> findByTenantCodeIgnoreCaseOrderByGeneratedAtDesc(String tenantCode);
+
+    long countByTenantCodeIgnoreCase(String tenantCode);
 }

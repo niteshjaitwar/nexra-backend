@@ -109,16 +109,16 @@ class ProductionReadinessValidatorTest {
     }
 
     @Test
-    @DisplayName("fails when verification token is exposed in production")
-    void shouldFailWhenExposeVerificationTokenInResponseTrue() {
+    @DisplayName("fails when mail is disabled in production")
+    void shouldFailWhenMailDisabledInProd() {
         when(environment.getActiveProfiles()).thenReturn(new String[]{"prod"});
         when(environment.getProperty("app.auth.bootstrap.enabled", "false")).thenReturn("false");
-        properties.setExposeVerificationTokenInResponse(true);
+        properties.getMail().setEnabled(false);
 
         ProductionReadinessValidator validator = new ProductionReadinessValidator(environment, properties, resourceLoader);
         assertThatThrownBy(() -> validator.run(null))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("expose-verification-token-in-response must be false in prod");
+            .hasMessageContaining("app.auth.mail.enabled must be true in prod");
     }
 
     @Test
@@ -188,7 +188,6 @@ class ProductionReadinessValidatorTest {
         AuthProperties config = new AuthProperties();
 
         config.getJwt().setSecret("12345678901234567890123456789012");
-        config.setExposeVerificationTokenInResponse(false);
 
         config.getOauth2().setEphemeralKeyEnabled(false);
         config.getOauth2().setIssuer("https://auth.nexra.local");
@@ -198,7 +197,7 @@ class ProductionReadinessValidatorTest {
         config.getOauth2().setKeystoreKeyAlias("nexra-auth");
         config.getOauth2().setKeystoreKeyPassword("change-me");
 
-        config.getMail().setEnabled(false);
+        config.getMail().setEnabled(true);
         config.getMail().setFrom("noreply@nexra.local");
         config.getSecurity().setRedisEnabled(true);
         config.getSecurity().setCorsAllowedOrigins(List.of("https://app.nexra.example", "https://hrms.nexra.example"));

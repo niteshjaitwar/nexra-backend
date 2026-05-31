@@ -30,8 +30,6 @@ public class ProductionReadinessValidator implements ApplicationRunner {
 
         assertCondition(!isBlank(authProperties.getJwt().getSecret()), "AUTH_JWT_SECRET must be configured.");
         assertCondition(authProperties.getJwt().getSecret().length() >= 32, "AUTH_JWT_SECRET must be at least 32 characters.");
-        assertCondition(!authProperties.isExposeVerificationTokenInResponse(),
-            "app.auth.expose-verification-token-in-response must be false in prod.");
         assertCondition(!Boolean.parseBoolean(environment.getProperty("app.auth.bootstrap.enabled", "false")),
             "app.auth.bootstrap.enabled must be false in prod.");
         assertCondition(!authProperties.getOauth2().isEphemeralKeyEnabled(),
@@ -73,10 +71,12 @@ public class ProductionReadinessValidator implements ApplicationRunner {
             "AUTH_REDIS_HOST must be configured in prod.");
         assertCondition(!isBlank(environment.getProperty("spring.data.redis.port")),
             "AUTH_REDIS_PORT must be configured in prod.");
-        if (authProperties.getMail().isEnabled()) {
-            assertCondition(!isBlank(authProperties.getMail().getFrom()),
-                "AUTH_MAIL_FROM must be configured when mail is enabled in prod.");
-        }
+        assertCondition(authProperties.getMail().isEnabled(),
+            "app.auth.mail.enabled must be true in prod so the SMTP-backed EmailNotificationService is the active "
+                + "NotificationService. A disabled mailer falls back to LoggingNotificationService and would silently "
+                + "drop OTP and verification messages.");
+        assertCondition(!isBlank(authProperties.getMail().getFrom()),
+            "AUTH_MAIL_FROM must be configured when mail is enabled in prod.");
     }
 
     private boolean isNonProductionProfileActive() {

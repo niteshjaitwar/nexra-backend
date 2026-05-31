@@ -1,8 +1,11 @@
 package com.nexra.hrms.nexra.modules.hrms.attendance.service;
 
+import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.AttendanceRegularizationDecisionRequest;
+import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.AttendanceRegularizationSubmitRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.CheckInRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.CheckOutRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.ShiftUpsertRequest;
+import com.nexra.hrms.nexra.modules.hrms.attendance.model.AttendanceRegularizationView;
 import com.nexra.hrms.nexra.modules.hrms.attendance.model.AttendanceRecordView;
 import com.nexra.hrms.nexra.modules.hrms.attendance.model.ShiftView;
 import com.nexra.hrms.nexra.modules.hrms.attendance.security.AuthenticatedAttendanceUser;
@@ -48,6 +51,23 @@ public interface AttendanceService {
         String employeeId,
         LocalDate fromDate,
         LocalDate toDate,
+        AuthenticatedAttendanceUser actor
+    );
+
+    AttendanceRegularizationView submitRegularization(
+        AttendanceRegularizationSubmitRequest request,
+        AuthenticatedAttendanceUser actor
+    );
+
+    AttendanceRegularizationView approveRegularization(
+        String requestId,
+        AttendanceRegularizationDecisionRequest request,
+        AuthenticatedAttendanceUser actor
+    );
+
+    AttendanceRegularizationView rejectRegularization(
+        String requestId,
+        AttendanceRegularizationDecisionRequest request,
         AuthenticatedAttendanceUser actor
     );
 }

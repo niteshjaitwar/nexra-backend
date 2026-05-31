@@ -11,4 +11,9 @@ public interface CrmWorkflowRuleRepository extends JpaRepository<CrmWorkflowRule
         String tenantCode,
         String moduleKey
     );
+
+    List<CrmWorkflowRuleEntity> findAllByTenantCodeIgnoreCaseAndModuleKeyIgnoreCaseAndActiveTrueOrderByPriorityAscNameAsc(
+        String tenantCode,
+        String moduleKey
+    );
 }

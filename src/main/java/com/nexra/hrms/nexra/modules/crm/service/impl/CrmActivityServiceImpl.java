@@ -8,6 +8,7 @@ import com.nexra.hrms.nexra.common.exception.NexraNotFoundException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmActivityCreateRequest;
+import com.nexra.hrms.nexra.modules.crm.dto.request.CrmActivityUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmActivityEntity;
 import com.nexra.hrms.nexra.modules.crm.model.CrmActivity;
 import com.nexra.hrms.nexra.modules.crm.repository.CrmActivityRepository;
@@ -24,14 +25,11 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class CrmActivityServiceImpl implements CrmActivityService {
-
-    private static final Set<String> USER_ACTIVITY_TYPES = Set.of("CALL", "EMAIL", "MEETING", "NOTE", "TASK");
 
     private final CrmActivityRepository activityRepository;
     private final CrmLeadRepository leadRepository;
@@ -48,7 +46,7 @@ public class CrmActivityServiceImpl implements CrmActivityService {
     ) {
         final String tenant = normalize(tenantCode);
         final String activityType = normalize(request.activityType()).toUpperCase(Locale.ROOT);
-        if (!USER_ACTIVITY_TYPES.contains(activityType)) {
+        if (!properties.getAllowedActivityTypesNormalized().contains(activityType)) {
             throw new NexraValidationException("Unsupported CRM activity type.");
         }
         enforceOwnerAccess(accessScope, request.ownerUserId());
@@ -71,6 +69,54 @@ public class CrmActivityServiceImpl implements CrmActivityService {
             .withTarget("CRM_ACTIVITY", saved.getId())
             .withDetail("{\"activityType\":\"" + saved.getActivityType() + "\"}"));
         return toModel(saved);
+    }
+
+    @Override
+    public CrmActivity findById(final String tenantCode, final String activityId, final CrmAccessScope accessScope) {
+        return toModel(loadVisible(activityId, tenantCode, accessScope));
+    }
+
+    @Override
+    public CrmActivity update(
+        final String tenantCode,
+        final String activityId,
+        final CrmActivityUpdateRequest request,
+        final CrmAccessScope accessScope
+    ) {
+        final CrmActivityEntity entity = loadVisible(activityId, tenantCode, accessScope);
+        if (request.ownerUserId() != null) {
+            enforceOwnerAccess(accessScope, request.ownerUserId());
+        }
+        if (request.activityType() != null) {
+            final String activityType = normalize(request.activityType()).toUpperCase(Locale.ROOT);
+            if (!properties.getAllowedActivityTypesNormalized().contains(activityType)) {
+                throw new NexraValidationException("Unsupported CRM activity type.");
+            }
+            entity.setActivityType(activityType);
+        }
+        if (request.notes() != null) {
+            entity.setNotes(normalizeNullable(request.notes()));
+        }
+        if (request.occurredAt() != null) {
+            entity.setOccurredAt(request.occurredAt());
+        }
+        if (request.ownerUserId() != null) {
+            entity.setOwnerUserId(normalize(request.ownerUserId()));
+        }
+        final CrmActivityEntity saved = activityRepository.save(entity);
+        auditEventService.record(AuditEventRecord.of(saved.getTenantCode(), "CRM", "UPDATE_ACTIVITY", "SUCCESS")
+            .withActor(saved.getOwnerUserId(), null)
+            .withTarget("CRM_ACTIVITY", saved.getId()));
+        return toModel(saved);
+    }
+
+    @Override
+    public void delete(final String tenantCode, final String activityId, final CrmAccessScope accessScope) {
+        final CrmActivityEntity entity = loadVisible(activityId, tenantCode, accessScope);
+        activityRepository.delete(entity);
+        auditEventService.record(AuditEventRecord.of(entity.getTenantCode(), "CRM", "DELETE_ACTIVITY", "SUCCESS")
+            .withActor(entity.getOwnerUserId(), null)
+            .withTarget("CRM_ACTIVITY", activityId));
     }
 
     @Override
@@ -125,6 +171,19 @@ public class CrmActivityServiceImpl implements CrmActivityService {
             result.hasNext(),
             result.hasPrevious()
         );
+    }
+
+    private CrmActivityEntity loadVisible(final String activityId, final String tenantCode, final CrmAccessScope accessScope) {
+        final CrmActivityEntity entity = activityRepository.findByIdAndTenantCodeIgnoreCase(activityId, normalize(tenantCode))
+            .orElseThrow(() -> new NexraNotFoundException("CRM activity not found for id: " + activityId));
+        if (accessScope.privileged()) {
+            return entity;
+        }
+        final String actorUserId = requireActorUserId(accessScope);
+        if (!actorUserId.equals(entity.getOwnerUserId())) {
+            throw new NexraNotFoundException("CRM activity not found for id: " + activityId);
+        }
+        return entity;
     }
 
     private void validateLinkedRecord(final String tenantCode, final CrmActivityCreateRequest request) {

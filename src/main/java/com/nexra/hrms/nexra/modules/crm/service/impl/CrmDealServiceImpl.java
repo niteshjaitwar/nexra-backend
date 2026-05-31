@@ -8,6 +8,7 @@ import com.nexra.hrms.nexra.common.exception.NexraNotFoundException;
 import com.nexra.hrms.nexra.common.exception.NexraValidationException;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmDealCreateRequest;
+import com.nexra.hrms.nexra.modules.crm.dto.request.CrmDealStageUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmDealUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.entity.CrmDealEntity;
 import com.nexra.hrms.nexra.modules.crm.model.CrmDeal;
@@ -18,9 +19,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -114,6 +117,40 @@ public class CrmDealServiceImpl implements CrmDealService {
         auditEventService.record(AuditEventRecord.of(entity.getTenantCode(), "CRM", "DELETE_DEAL", "SUCCESS")
             .withActor(entity.getOwnerUserId(), null)
             .withTarget("CRM_DEAL", dealId));
+    }
+
+    @Override
+    @Transactional
+    public CrmDeal transitionStage(
+        final String tenantCode,
+        final String actorEmail,
+        final String dealId,
+        final CrmDealStageUpdateRequest request,
+        final CrmAccessScope accessScope
+    ) {
+        final String normalizedTenant = normalize(tenantCode);
+        final CrmDealEntity entity = repository.findByIdAndTenantCodeIgnoreCase(dealId, normalizedTenant)
+            .orElseThrow(() -> new NexraNotFoundException("CRM deal not found for id: " + dealId));
+        ensureVisibleForAccessScope(entity, accessScope, dealId);
+
+        final CrmProperties.Deal config = properties.getDeal();
+        final String current = entity.getStage();
+        final String target = request.targetStage().trim().toUpperCase(Locale.ROOT);
+
+        if (!config.isKnownStage(target)) {
+            throw new NexraValidationException("Unknown deal stage: " + target);
+        }
+        if (!config.isTransitionAllowed(current, target)) {
+            throw new NexraValidationException("Illegal deal stage transition from " + current + " to " + target + ".");
+        }
+
+        entity.setStage(target);
+        final CrmDealEntity saved = repository.save(entity);
+        auditEventService.record(AuditEventRecord.of(saved.getTenantCode(), "CRM", "DEAL_STAGE_TRANSITION", "SUCCESS")
+            .withActor(actorEmail, null)
+            .withTarget("CRM_DEAL", saved.getId())
+            .withDetail("{\"from\":\"" + current + "\",\"to\":\"" + target + "\"}"));
+        return toModel(saved);
     }
 
     private void validatePaging(final int page, final int size) {

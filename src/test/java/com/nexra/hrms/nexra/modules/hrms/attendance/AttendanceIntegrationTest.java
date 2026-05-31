@@ -105,6 +105,66 @@ class AttendanceIntegrationTest {
     }
 
     @Test
+    void attendanceRegularizationWorkflowAppliesApprovedTimes() throws Exception {
+        UUID employeeId = UUID.randomUUID();
+        String employeeToken = bearerToken(employeeId, "ACME", List.of("ROLE_EMPLOYEE"));
+        String adminToken = bearerToken(UUID.randomUUID(), "ACME", List.of("ROLE_HR_ADMIN"));
+
+        mockMvc.perform(put("/api/v1/attendance/shifts")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "code":"GEN",
+                      "name":"General Shift",
+                      "startTime":"09:00",
+                      "endTime":"18:00",
+                      "graceMinutes":15
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        final String submitResponse = mockMvc.perform(post("/api/v1/attendance/regularizations")
+                .header("Authorization", "Bearer " + employeeToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "tenantCode":"ACME",
+                      "employeeId":"%s",
+                      "workDate":"2026-03-12",
+                      "reason":"Missed punch",
+                      "requestedCheckInAt":"2026-03-12T09:00:00Z",
+                      "requestedCheckOutAt":"2026-03-12T18:00:00Z"
+                    }
+                    """.formatted(employeeId)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.status").value("PENDING"))
+            .andReturn().getResponse().getContentAsString();
+
+        final String requestId = com.jayway.jsonpath.JsonPath.read(submitResponse, "$.data.id");
+
+        mockMvc.perform(post("/api/v1/attendance/regularizations/{requestId}/approve", requestId)
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"tenantCode":"ACME","decisionComment":"Approved missed punch"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("APPROVED"));
+
+        mockMvc.perform(get("/api/v1/attendance/records")
+                .header("Authorization", "Bearer " + employeeToken)
+                .param("tenantCode", "ACME")
+                .param("employeeId", employeeId.toString())
+                .param("fromDate", "2026-03-12")
+                .param("toDate", "2026-03-12"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items[0].checkInAt").exists())
+            .andExpect(jsonPath("$.data.items[0].checkOutAt").exists());
+    }
+
+    @Test
     void attendanceTenantMismatchRejected() throws Exception {
         UUID userId = UUID.randomUUID();
         String token = bearerToken(userId, "OTHER", List.of("ROLE_PLATFORM_ADMIN"));

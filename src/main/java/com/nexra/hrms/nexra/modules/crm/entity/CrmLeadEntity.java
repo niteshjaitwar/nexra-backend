@@ -37,6 +37,9 @@ public class CrmLeadEntity extends BaseAuditableEntity {
     @Column(name = "source", length = 80)
     private String source;
 
+    @Column(name = "campaign_id", length = 36)
+    private String campaignId;
+
     @Column(name = "owner_user_id", nullable = false, length = 36)
     private String ownerUserId;
 
@@ -107,6 +110,14 @@ public class CrmLeadEntity extends BaseAuditableEntity {
 
     public void setSource(final String source) {
         this.source = source;
+    }
+
+    public String getCampaignId() {
+        return campaignId;
+    }
+
+    public void setCampaignId(final String campaignId) {
+        this.campaignId = campaignId;
     }
 
     public String getOwnerUserId() {

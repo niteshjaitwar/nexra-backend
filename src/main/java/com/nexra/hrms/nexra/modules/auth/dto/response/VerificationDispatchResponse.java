@@ -9,7 +9,6 @@ package com.nexra.hrms.nexra.modules.auth.dto.response;
 public record VerificationDispatchResponse(
     String channel,
     String destination,
-    String hint,
-    String rawTokenForDevOnly
+    String hint
 ) {
 }

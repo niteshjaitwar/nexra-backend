@@ -157,6 +157,151 @@ class PayrollIntegrationTest {
     }
 
     @Test
+    void generatesAndListsStatutoryFilingArtifacts() throws Exception {
+        String token = bearerToken("FILING_CO", List.of("ROLE_PAYROLL_ADMIN"));
+
+        mockMvc.perform(post("/api/v1/payroll/statutory/IN/filings")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "period":"2026-03",
+                      "grossAmounts":[50000, 16000]
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.filingType").value("PF_ESI_PT_RETURN"))
+            .andExpect(jsonPath("$.data.status").value("GENERATED"))
+            .andExpect(jsonPath("$.data.employeeCount").value(2))
+            .andExpect(jsonPath("$.data.referenceNumber").value(containsString("PF_ESI_PT_RETURN-IN-202603")))
+            .andExpect(jsonPath("$.data.componentTotals").isNotEmpty());
+
+        // Duplicate filing for the same period/type is rejected.
+        mockMvc.perform(post("/api/v1/payroll/statutory/IN/filings")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "period":"2026-03",
+                      "grossAmounts":[50000]
+                    }
+                    """))
+            .andExpect(status().isConflict());
+
+        mockMvc.perform(get("/api/v1/payroll/statutory/IN/filings")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data[0].period").value("2026-03"))
+            .andExpect(jsonPath("$.data[0].filingType").value("PF_ESI_PT_RETURN"));
+
+        final String generateResponse = mockMvc.perform(post("/api/v1/payroll/statutory/US/filings")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "period":"2026-04",
+                      "grossAmounts":[9000]
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        final String filingId = com.jayway.jsonpath.JsonPath.read(generateResponse, "$.data.id");
+
+        mockMvc.perform(get("/api/v1/payroll/statutory/US/filings/{id}", filingId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.id").value(filingId))
+            .andExpect(jsonPath("$.data.status").value("GENERATED"));
+
+        mockMvc.perform(post("/api/v1/payroll/statutory/US/filings/{id}/submit", filingId)
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"submissionReference":"941-202604"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("SUBMITTED"));
+
+        mockMvc.perform(post("/api/v1/payroll/statutory/US/filings/{id}/lock", filingId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.status").value("LOCKED"));
+
+        mockMvc.perform(get("/api/v1/payroll/statutory/US/filings/{id}/export", filingId)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.submissionFormat").value("FORM_941_JSON"))
+            .andExpect(jsonPath("$.data.filingId").value(filingId));
+
+        mockMvc.perform(get("/api/v1/payroll/statutory/US/filings/{id}/export", filingId)
+                .header("Authorization", "Bearer " + token)
+                .param("format", "xml"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data").isString())
+            .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.containsString("<StatutoryFilingExport")))
+            .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.containsString("FORM_941_JSON")));
+    }
+
+    @Test
+    void calculatesGermanyStatutoryBreakdown() throws Exception {
+        String token = bearerToken("FILING_CO", List.of("ROLE_PAYROLL_ADMIN"));
+
+        mockMvc.perform(get("/api/v1/payroll/statutory/DE/breakdown")
+                .header("Authorization", "Bearer " + token)
+                .param("grossMonthly", "8000"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.countryCode").value("DE"))
+            // Pension 9.3% of 7550 cap = 702.15 employee; health 7.3% of 5512.50 cap = 402.41 employee.
+            .andExpect(jsonPath("$.data.employeeTotal").value(1104.56))
+            .andExpect(jsonPath("$.data.employerTotal").value(1104.56));
+    }
+
+    @Test
+    void rejectsUnauthenticatedFilingGeneration() throws Exception {
+        mockMvc.perform(post("/api/v1/payroll/statutory/IN/filings")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"period\":\"2026-04\",\"grossAmounts\":[10000]}"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rejectsFilingGenerationForWrongProductScope() throws Exception {
+        String token = bearerToken("FILING_CO", List.of("ROLE_PAYROLL_ADMIN"), Set.of("CRM"));
+        mockMvc.perform(post("/api/v1/payroll/statutory/IN/filings")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"period\":\"2026-04\",\"grossAmounts\":[10000]}"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("User does not have payroll product access"));
+    }
+
+    @Test
+    void rejectsFilingGenerationForNonAdminRole() throws Exception {
+        String token = bearerToken("FILING_CO", List.of("ROLE_EMPLOYEE"));
+        mockMvc.perform(post("/api/v1/payroll/statutory/IN/filings")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"period\":\"2026-04\",\"grossAmounts\":[10000]}"))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("User does not have payroll administration permission"));
+    }
+
+    @Test
+    void calculatesUnitedStatesFicaBreakdown() throws Exception {
+        String token = bearerToken("FILING_CO", List.of("ROLE_PAYROLL_ADMIN"));
+
+        mockMvc.perform(get("/api/v1/payroll/statutory/US/breakdown")
+                .header("Authorization", "Bearer " + token)
+                .param("grossMonthly", "10000"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.countryCode").value("US"))
+            // Social Security 6.2% of 10000 = 620 (employee) + 620 (employer);
+            // Medicare 1.45% of 10000 = 145 each. Employee total = 765.
+            .andExpect(jsonPath("$.data.employeeTotal").value(765.00))
+            .andExpect(jsonPath("$.data.employerTotal").value(765.00));
+    }
+
+    @Test
     void rejectsTenantMismatch() throws Exception {
         String token = bearerToken("OTHER", List.of("ROLE_PAYROLL_ADMIN"));
 

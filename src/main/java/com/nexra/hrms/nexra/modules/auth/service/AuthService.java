@@ -2,14 +2,22 @@ package com.nexra.hrms.nexra.modules.auth.service;
 
 import com.nexra.hrms.nexra.modules.auth.dto.request.LinkVerificationRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.LoginRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.request.MfaVerifySetupRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.OtpVerificationRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.request.PasswordResetConfirmRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.RefreshTokenRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.RegisterRequest;
 import com.nexra.hrms.nexra.modules.auth.dto.request.VerificationRequest;
+import com.nexra.hrms.nexra.modules.auth.dto.response.AuthMeResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.AuthSessionResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.MfaEnableResponse;
+import com.nexra.hrms.nexra.modules.auth.dto.response.MfaSetupResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.TokenPairResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.UserProfileResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.VerificationDispatchResponse;
 import com.nexra.hrms.nexra.modules.auth.dto.response.VerificationResultResponse;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Defines enterprise-grade authentication workflows including credentials, JWT, and verification factors.
@@ -81,4 +89,24 @@ public interface AuthService {
      * @return verification result with optional tokens
      */
     VerificationResultResponse verifyLink(LinkVerificationRequest request);
+
+    /**
+     * Returns the authenticated user's profile, roles, and product entitlements.
+     *
+     * @param userId authenticated user identifier from JWT
+     * @return session profile for the current user
+     */
+    AuthMeResponse getCurrentUser(UUID userId);
+
+    void confirmPasswordReset(PasswordResetConfirmRequest request);
+
+    MfaSetupResponse setupMfa(UUID userId);
+
+    MfaEnableResponse verifyMfaSetup(UUID userId, MfaVerifySetupRequest request);
+
+    void disableMfa(UUID userId, MfaVerifySetupRequest request);
+
+    List<AuthSessionResponse> listSessions(UUID userId, String currentRefreshToken);
+
+    void revokeAllSessions(UUID userId, RefreshTokenRequest keepCurrent);
 }

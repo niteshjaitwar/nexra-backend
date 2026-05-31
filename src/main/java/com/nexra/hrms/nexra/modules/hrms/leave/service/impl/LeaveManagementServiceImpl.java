@@ -2,6 +2,7 @@ package com.nexra.hrms.nexra.modules.hrms.leave.service.impl;
 
 import com.nexra.hrms.nexra.common.audit.AuditEventRecord;
 import com.nexra.hrms.nexra.common.audit.AuditEventService;
+import com.nexra.hrms.nexra.common.workflow.WorkflowRuntime;
 import com.nexra.hrms.nexra.modules.hrms.leave.dto.request.HolidayUpsertRequest;
 import com.nexra.hrms.nexra.modules.hrms.leave.dto.request.LeaveBalanceAdjustRequest;
 import com.nexra.hrms.nexra.modules.hrms.leave.dto.request.LeaveDecisionRequest;
@@ -30,6 +31,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +59,10 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final EmployeeRepository employeeRepository;
     private final AuditEventService auditEventService;
+    private final WorkflowRuntime workflowRuntime;
+
+    private static final String WORKFLOW_PRODUCT_CODE = "HRMS";
+    private static final String WORKFLOW_MODULE_KEY = "leave-approvals";
 
     @Override
     @Transactional
@@ -230,6 +236,20 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
             tenant, request.employeeId(), leaveTypeCode, request.startDate(), request.endDate());
 
         LeaveRequestEntity saved = leaveRequestRepository.save(entity);
+        final WorkflowRuntime.WorkflowSubmissionResult workflow = workflowRuntime.submit(
+            saved.getTenantCode(),
+            WORKFLOW_PRODUCT_CODE,
+            WORKFLOW_MODULE_KEY,
+            "LEAVE_REQUEST_SUBMITTED",
+            actor.email(),
+            Map.of(
+                "leaveRequestId", saved.getId(),
+                "employeeId", saved.getEmployeeId(),
+                "status", saved.getStatus()
+            )
+        );
+        saved.setWorkflowInstanceId(workflow.workflowRef());
+        saved = leaveRequestRepository.save(saved);
         recordAudit(saved.getTenantCode(), "CREATE_LEAVE_REQUEST", actor, "LEAVE_REQUEST", saved.getId());
         return toLeaveRequest(saved);
     }
@@ -336,6 +356,28 @@ public class LeaveManagementServiceImpl implements LeaveManagementService {
             tenant, requestId, approve ? "APPROVE" : "REJECT", actor.email());
         LeaveRequestEntity saved = leaveRequestRepository.save(entity);
         recordAudit(saved.getTenantCode(), approve ? "APPROVE_LEAVE_REQUEST" : "REJECT_LEAVE_REQUEST", actor, "LEAVE_REQUEST", saved.getId());
+        if (saved.getWorkflowInstanceId() != null) {
+            workflowRuntime.advance(
+                saved.getTenantCode(),
+                saved.getWorkflowInstanceId(),
+                approve,
+                actor.email(),
+                blankToNull(request.decisionComment())
+            );
+        } else {
+            workflowRuntime.submit(
+                saved.getTenantCode(),
+                WORKFLOW_PRODUCT_CODE,
+                WORKFLOW_MODULE_KEY,
+                approve ? "LEAVE_REQUEST_APPROVED" : "LEAVE_REQUEST_REJECTED",
+                actor.email(),
+                Map.of(
+                    "leaveRequestId", saved.getId(),
+                    "employeeId", saved.getEmployeeId(),
+                    "status", saved.getStatus()
+                )
+            );
+        }
         return toLeaveRequest(saved);
     }
 

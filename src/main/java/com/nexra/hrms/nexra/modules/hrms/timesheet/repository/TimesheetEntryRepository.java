@@ -2,6 +2,7 @@ package com.nexra.hrms.nexra.modules.hrms.timesheet.repository;
 
 import com.nexra.hrms.nexra.modules.hrms.timesheet.entity.TimesheetEntryEntity;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -20,4 +21,8 @@ public interface TimesheetEntryRepository extends JpaRepository<TimesheetEntryEn
         String tenantCode, String employeeId, LocalDate fromDate, LocalDate toDate, Pageable pageable
     );
     Page<TimesheetEntryEntity> findByTenantCodeIgnoreCase(String tenantCode, Pageable pageable);
+
+    long countByTenantCodeIgnoreCase(String tenantCode);
+
+    long countByTenantCodeIgnoreCaseAndStatusIn(String tenantCode, Collection<String> statuses);
 }

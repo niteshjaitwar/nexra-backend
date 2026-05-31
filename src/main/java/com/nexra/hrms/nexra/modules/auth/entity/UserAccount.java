@@ -57,6 +57,9 @@ public class UserAccount extends AbstractAuditableEntity {
     @Column(nullable = false)
     private boolean mfaEnabled;
 
+    @Column(name = "mfa_secret", length = 128)
+    private String mfaSecret;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private AccountType accountType;

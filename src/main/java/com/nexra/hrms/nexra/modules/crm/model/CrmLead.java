@@ -28,6 +28,7 @@ public record CrmLead(
     String phone,
     String company,
     String source,
+    String campaignId,
     String ownerUserId,
     String notes,
     CrmLeadStatus status,

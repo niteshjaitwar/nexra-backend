@@ -1,11 +1,14 @@
 package com.nexra.hrms.nexra.modules.hrms.attendance.controller;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
+import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.AttendanceRegularizationDecisionRequest;
+import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.AttendanceRegularizationSubmitRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.CheckInRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.CheckOutRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.dto.request.ShiftUpsertRequest;
 import com.nexra.hrms.nexra.modules.hrms.attendance.exception.AttendanceForbiddenException;
 import com.nexra.hrms.nexra.modules.hrms.attendance.exception.AttendanceUnauthorizedException;
+import com.nexra.hrms.nexra.modules.hrms.attendance.model.AttendanceRegularizationView;
 import com.nexra.hrms.nexra.modules.hrms.attendance.model.AttendanceRecordView;
 import com.nexra.hrms.nexra.modules.hrms.attendance.model.ShiftView;
 import com.nexra.hrms.nexra.modules.hrms.attendance.security.AttendanceAuthFilter;
@@ -26,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -268,6 +272,45 @@ public class AttendanceController {
         return ResponseEntity.ok(ApiResponse.success(
             "Attendance summary fetched successfully.",
             attendanceService.summary(tenantCode, employeeId, fromDate, toDate, currentUser(httpRequest))
+        ));
+    }
+
+    @PostMapping("/regularizations")
+    public ResponseEntity<ApiResponse<AttendanceRegularizationView>> submitRegularization(
+        @Valid @RequestBody final AttendanceRegularizationSubmitRequest request,
+        final HttpServletRequest httpRequest
+    ) {
+        return ResponseEntity.status(201).body(ApiResponse.created(
+            attendanceService.submitRegularization(request, currentUser(httpRequest)),
+            "Attendance regularization submitted successfully."
+        ));
+    }
+
+    @PostMapping("/regularizations/{requestId}/approve")
+    public ResponseEntity<ApiResponse<AttendanceRegularizationView>> approveRegularization(
+        @PathVariable final String requestId,
+        @Valid @RequestBody final AttendanceRegularizationDecisionRequest request,
+        final HttpServletRequest httpRequest
+    ) {
+        AuthenticatedAttendanceUser actor = currentUser(httpRequest);
+        requireAdmin(actor);
+        return ResponseEntity.ok(ApiResponse.success(
+            "Attendance regularization approved.",
+            attendanceService.approveRegularization(requestId, request, actor)
+        ));
+    }
+
+    @PostMapping("/regularizations/{requestId}/reject")
+    public ResponseEntity<ApiResponse<AttendanceRegularizationView>> rejectRegularization(
+        @PathVariable final String requestId,
+        @Valid @RequestBody final AttendanceRegularizationDecisionRequest request,
+        final HttpServletRequest httpRequest
+    ) {
+        AuthenticatedAttendanceUser actor = currentUser(httpRequest);
+        requireAdmin(actor);
+        return ResponseEntity.ok(ApiResponse.success(
+            "Attendance regularization rejected.",
+            attendanceService.rejectRegularization(requestId, request, actor)
         ));
     }
 

@@ -2,8 +2,10 @@ package com.nexra.hrms.nexra.modules.crm.controller;
 
 import com.nexra.hrms.nexra.common.api.ApiResponse;
 import com.nexra.hrms.nexra.common.api.PageResponse;
+import com.nexra.hrms.nexra.common.security.NexraPermission;
 import com.nexra.hrms.nexra.modules.crm.config.CrmProperties;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmDealCreateRequest;
+import com.nexra.hrms.nexra.modules.crm.dto.request.CrmDealStageUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.dto.request.CrmDealUpdateRequest;
 import com.nexra.hrms.nexra.modules.crm.model.CrmDeal;
 import com.nexra.hrms.nexra.modules.crm.service.CrmDealService;
@@ -14,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,6 +45,7 @@ public class CrmDealController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "CRM product access missing.")
     })
     @PostMapping
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_WRITE + "')")
     public ResponseEntity<ApiResponse<CrmDeal>> create(@Valid @RequestBody final CrmDealCreateRequest request) {
         return ResponseEntity.status(201).body(ApiResponse.created(
             service.create(resolveTenantCode(), request, requestContextResolver.resolveCrmAccessScope(properties)),
@@ -57,6 +61,7 @@ public class CrmDealController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM deal not found.")
     })
     @GetMapping("/{dealId}")
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_READ + "')")
     public ResponseEntity<ApiResponse<CrmDeal>> getById(@PathVariable final String dealId) {
         return ResponseEntity.ok(ApiResponse.ok(
             service.findById(resolveTenantCode(), dealId, requestContextResolver.resolveCrmAccessScope(properties)),
@@ -72,6 +77,7 @@ public class CrmDealController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "Invalid pagination parameters.")
     })
     @GetMapping
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_READ + "')")
     public ResponseEntity<ApiResponse<PageResponse<CrmDeal>>> list(
         @RequestParam(defaultValue = "0") final int page,
         @RequestParam(defaultValue = "20") final int size
@@ -91,6 +97,7 @@ public class CrmDealController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM deal not found.")
     })
     @PutMapping("/{dealId}")
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_WRITE + "')")
     public ResponseEntity<ApiResponse<CrmDeal>> update(
         @PathVariable final String dealId,
         @Valid @RequestBody final CrmDealUpdateRequest request
@@ -109,13 +116,37 @@ public class CrmDealController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "CRM deal not found.")
     })
     @DeleteMapping("/{dealId}")
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_WRITE + "')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable final String dealId) {
         service.delete(resolveTenantCode(), dealId, requestContextResolver.resolveCrmAccessScope(properties));
         return ResponseEntity.ok(ApiResponse.empty("CRM deal deleted successfully."));
     }
 
+    @Operation(summary = "Transition CRM deal stage")
+    @PostMapping("/{dealId}/transition")
+    @PreAuthorize("hasPermission(null, '" + NexraPermission.CRM_WRITE + "')")
+    public ResponseEntity<ApiResponse<CrmDeal>> transitionStage(
+        @PathVariable final String dealId,
+        @Valid @RequestBody final CrmDealStageUpdateRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+            service.transitionStage(
+                resolveTenantCode(),
+                resolveActorEmail(),
+                dealId,
+                request,
+                requestContextResolver.resolveCrmAccessScope(properties)
+            ),
+            "CRM deal stage updated successfully."
+        ));
+    }
+
     private String resolveTenantCode() {
         return requestContextResolver.resolveTenantCode(properties);
+    }
+
+    private String resolveActorEmail() {
+        return requestContextResolver.resolveActorEmail();
     }
 }
 

@@ -18,4 +18,8 @@ public interface ExpenseClaimRepository extends JpaRepository<ExpenseClaimEntity
     Page<ExpenseClaimEntity> findByTenantCodeIgnoreCaseAndEmployeeId(String tenantCode, String employeeId, Pageable pageable);
     Page<ExpenseClaimEntity> findByTenantCodeIgnoreCaseAndStatusIgnoreCase(String tenantCode, String status, Pageable pageable);
     Page<ExpenseClaimEntity> findByTenantCodeIgnoreCaseAndEmployeeIdAndStatusIgnoreCase(String tenantCode, String employeeId, String status, Pageable pageable);
+
+    long countByTenantCodeIgnoreCase(String tenantCode);
+
+    long countByTenantCodeIgnoreCaseAndStatusIgnoreCase(String tenantCode, String status);
 }
